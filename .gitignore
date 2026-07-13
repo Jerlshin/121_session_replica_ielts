@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+*.env
+.env
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+apps/web/next-env.d.ts
+
+# OS
+.DS_Store
+
+# Docker volumes are named, not bind-mounted — nothing to ignore there.

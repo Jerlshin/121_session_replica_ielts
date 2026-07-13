@@ -1,0 +1,251 @@
+import asyncio
+import json
+import logging
+import time
+import uuid
+
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, WebSocketException, status
+from fastapi.concurrency import run_in_threadpool
+from jose import JWTError, jwt
+from sqlalchemy.dialects.postgresql import insert
+from websockets.exceptions import ConnectionClosed
+
+from app.config import settings
+from app.db import AsyncSessionLocal
+from app.models import AudioSegment, ExamSession
+from app.services.gemini_bridge import (
+    AudioDelta,
+    GeminiLiveBridge,
+    GoAway,
+    Interrupted,
+    SessionResumptionUpdate,
+    TranscriptDelta,
+    TurnComplete,
+    load_base_persona,
+    load_directive,
+)
+from app.services.media_tap import persist_turn_audio
+
+router = APIRouter(tags=["ws"])
+logger = logging.getLogger("app.ws_exam")
+
+# Spec 01 §4.4 total P95 budget (PTT-release -> first audible reply) across
+# all 7 hops. We can only measure hops 3-5 (gateway->Gemini->gateway) from
+# here; hops 1/2/6/7 are client/network and not observable server-side.
+_LATENCY_P95_BUDGET_MS = 980
+
+
+async def _authenticate(token: str, session_id: uuid.UUID) -> str | None:
+    """Validates the token against the session and returns any stored
+    Gemini resumption handle (Spec 01 §5.3) so the caller can attempt a
+    transparent resume instead of starting context from scratch."""
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        candidate_id = uuid.UUID(payload["sub"])
+    except (JWTError, KeyError, ValueError) as exc:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION) from exc
+
+    async with AsyncSessionLocal() as db:
+        session = await db.get(ExamSession, session_id)
+        if session is None or session.candidate_id != candidate_id:
+            raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+        return session.gemini_resumption_handle
+
+
+async def _persist_resumption_handle(session_id: uuid.UUID, handle: str) -> None:
+    async with AsyncSessionLocal() as db:
+        session = await db.get(ExamSession, session_id)
+        if session is not None:
+            session.gemini_resumption_handle = handle
+            await db.commit()
+
+
+async def _flush_turn(session_id: uuid.UUID, turn_id: uuid.UUID, pcm_bytes: bytes) -> dict:
+    seq = 1  # single flush per turn (Spec 01 §4.2); retries reuse the same
+    # seq so the insert below is idempotent rather than a duplicate write.
+    metadata = await run_in_threadpool(persist_turn_audio, session_id, turn_id, seq, pcm_bytes)
+
+    async with AsyncSessionLocal() as db:
+        stmt = (
+            insert(AudioSegment)
+            .values(
+                session_id=session_id,
+                turn_id=turn_id,
+                seq=seq,
+                storage_key=metadata["storage_key"],
+                checksum=metadata["checksum"],
+                byte_size=metadata["byte_size"],
+            )
+            .on_conflict_do_nothing(constraint="uq_audio_segment_key")
+        )
+        await db.execute(stmt)
+        await db.commit()
+
+    return metadata
+
+
+async def _flush_turn_in_background(
+    outbox: asyncio.Queue, session_id: uuid.UUID, turn_id: uuid.UUID, pcm_bytes: bytes
+) -> None:
+    """Runs off the relay's critical path (Spec 01 §4.2: "async append...
+    non-blocking") so persisting the candidate's turn audio never delays
+    Gemini's reply reaching the client."""
+    try:
+        metadata = await _flush_turn(session_id, turn_id, pcm_bytes)
+        await outbox.put(
+            {
+                "type": "turn_complete",
+                "turn_id": str(turn_id),
+                "byte_size": metadata["byte_size"],
+                "checksum": metadata["checksum"],
+            }
+        )
+    except Exception:
+        logger.exception("media flush failed session=%s turn=%s", session_id, turn_id)
+
+
+@router.websocket("/ws/exam/{session_id}")
+async def exam_media_loopback(
+    websocket: WebSocket, session_id: uuid.UUID, token: str = Query(...)
+) -> None:
+    """Phase 2 Gemini Live bridge (Spec 04 §2): PTT press/hold/release
+    drives activityStart/audio/activityEnd against a real Gemini Live
+    connection (VAD disabled, Spec 01 §4.1 / CLAUDE.md rule 2); Gemini's
+    audio + caption deltas are relayed back to the client as they arrive.
+    Candidate audio is still tapped to object storage (Spec 01 §4.2/§5.5),
+    but that write now runs in the background so it can never add to the
+    PTT-release -> first-audible-reply latency budget (Spec 01 §4.4).
+    """
+    resumption_handle = await _authenticate(token, session_id)
+    await websocket.accept()
+
+    outbox: asyncio.Queue = asyncio.Queue()
+
+    bridge = GeminiLiveBridge(
+        session_id=session_id,
+        api_key=settings.gemini_api_key,
+        model_id=settings.live_model_id,
+        ws_url=settings.gemini_live_ws_url,
+        system_instruction=load_base_persona(settings.prompt_templates_dir),
+        resumption_handle=resumption_handle,
+    )
+    await bridge.connect()
+
+    await outbox.put({"type": "connected", "session_id": str(session_id)})
+    if resumption_handle:
+        await outbox.put({"type": "resumed", "session_id": str(session_id)})
+    else:
+        # Phase 2 exit criterion: a minimal single-turn scripted
+        # conversation proving the bridge is wired end-to-end (Spec 04 §2).
+        connectivity_directive = load_directive(settings.prompt_templates_dir, "connectivity_test")
+        await bridge.inject_directive(connectivity_directive)
+
+    turn_id: uuid.UUID | None = None
+    buffer = bytearray()
+    turn_release_monotonic: float | None = None
+    awaiting_first_audio = False
+
+    async def writer() -> None:
+        while True:
+            item = await outbox.get()
+            if item is None:
+                return
+            if isinstance(item, bytes):
+                await websocket.send_bytes(item)
+            else:
+                await websocket.send_json(item)
+
+    async def pump_client_to_gemini() -> None:
+        nonlocal turn_id, buffer, turn_release_monotonic, awaiting_first_audio
+        while True:
+            message = await websocket.receive()
+            if message["type"] == "websocket.disconnect":
+                return
+
+            text_payload = message.get("text")
+            bytes_payload = message.get("bytes")
+
+            if text_payload is not None:
+                control = json.loads(text_payload)
+                control_type = control.get("type")
+
+                if control_type == "activity_start":
+                    turn_id = uuid.uuid4()
+                    buffer = bytearray()
+                    await bridge.send_activity_start()
+                    await outbox.put({"type": "activity_start_ack", "turn_id": str(turn_id)})
+
+                elif control_type == "activity_end":
+                    if turn_id is None:
+                        continue
+                    await bridge.send_activity_end()
+                    turn_release_monotonic = time.monotonic()
+                    awaiting_first_audio = True
+                    asyncio.create_task(
+                        _flush_turn_in_background(outbox, session_id, turn_id, bytes(buffer))
+                    )
+                    turn_id = None
+                    buffer = bytearray()
+
+            elif bytes_payload is not None:
+                if turn_id is None:
+                    # A frame arriving outside an active turn is dropped —
+                    # PTT activity_start/activity_end is the sole turn
+                    # boundary authority (CLAUDE.md rule 2).
+                    continue
+                buffer.extend(bytes_payload)
+                await bridge.send_audio_frame(bytes_payload)
+
+    async def pump_gemini_to_client() -> None:
+        nonlocal turn_release_monotonic, awaiting_first_audio
+        async for event in bridge.receive_events():
+            if isinstance(event, AudioDelta):
+                await outbox.put(event.pcm_bytes)
+                if awaiting_first_audio and turn_release_monotonic is not None:
+                    elapsed_ms = (time.monotonic() - turn_release_monotonic) * 1000
+                    awaiting_first_audio = False
+                    log = logger.warning if elapsed_ms > _LATENCY_P95_BUDGET_MS else logger.info
+                    log(
+                        "turn_latency session=%s server_hop_ms=%.1f budget_p95_ms=%d "
+                        "(gateway->Gemini->gateway only; excludes client/network hops)",
+                        session_id,
+                        elapsed_ms,
+                        _LATENCY_P95_BUDGET_MS,
+                    )
+            elif isinstance(event, TranscriptDelta):
+                await outbox.put({"type": "transcript_delta", "text": event.text})
+            elif isinstance(event, TurnComplete):
+                await outbox.put({"type": "gemini_turn_complete"})
+            elif isinstance(event, Interrupted):
+                await outbox.put({"type": "interrupted"})
+            elif isinstance(event, SessionResumptionUpdate):
+                if event.resumable:
+                    await _persist_resumption_handle(session_id, event.handle)
+            elif isinstance(event, GoAway):
+                await outbox.put({"type": "server_going_away", "time_left_ms": event.time_left_ms})
+
+    writer_task = asyncio.create_task(writer())
+    client_task = asyncio.create_task(pump_client_to_gemini())
+    gemini_task = asyncio.create_task(pump_gemini_to_client())
+
+    try:
+        done, pending = await asyncio.wait(
+            {client_task, gemini_task}, return_when=asyncio.FIRST_COMPLETED
+        )
+        for task in pending:
+            task.cancel()
+        await asyncio.gather(*pending, return_exceptions=True)
+        for task in done:
+            exc = task.exception()
+            # A clean browser disconnect or Gemini closing the WS after a
+            # GoAway are expected end-of-session paths here, not bugs — full
+            # reconnect/resume orchestration on top of them is Phase 4
+            # (Spec 01 §5.3/§5.6).
+            if exc is not None and not isinstance(exc, (WebSocketDisconnect, ConnectionClosed)):
+                raise exc
+    except (WebSocketDisconnect, ConnectionClosed):
+        pass
+    finally:
+        await outbox.put(None)
+        await asyncio.gather(writer_task, return_exceptions=True)
+        await bridge.close()

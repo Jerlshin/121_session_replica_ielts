@@ -1,0 +1,30 @@
+[project]
+name = "worker"
+version = "0.1.0"
+description = "Celery grading engine — asynchronous 4-criteria IELTS rubric pipeline"
+requires-python = ">=3.11"
+dependencies = [
+    "celery[redis]>=5.4",
+    "redis>=5.2",
+    "sqlalchemy>=2.0",
+    "psycopg2-binary>=2.9",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "ruff>=0.7",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["tasks*", "pipelines*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

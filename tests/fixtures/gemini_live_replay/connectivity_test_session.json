@@ -1,0 +1,78 @@
+{
+  "_comment": "Recorded/scripted Gemini Live BidiGenerateContent session used by tests/integration/_fake_gemini_live_server.py to replay deterministic server responses without hitting the real API (Spec 04 Phase 2 exit criterion, Spec 04 \u00a73).",
+  "responses": {
+    "after_setup": [
+      {
+        "setupComplete": {}
+      }
+    ],
+    "after_directive": [
+      {
+        "serverContent": {
+          "outputTranscription": {
+            "text": "Hello there. Could you say hello back for me?"
+          }
+        }
+      },
+      {
+        "serverContent": {
+          "modelTurn": {
+            "parts": [
+              {
+                "inlineData": {
+                  "mimeType": "audio/pcm;rate=24000",
+                  "data": "MPiE+Nf4Kvl++dH5JPp4+sv6Hvty+8X7GPxs/L/8Ev1m/bn9DP5g/rP+Bv9a/63/AABTAKYA+gBNAaAB9AFHApoC7gJBA5QD6AM7BI4E4gQ1BYgF3AUvBoIG1gYpB3wHMPiE+Nf4Kvl++dH5JPp4+sv6Hvty+8X7GPxs/L/8Ev1m/bn9DP5g/rP+Bv9a/63/AABTAKYA+gBNAaAB9AFHApoC7gJBA5QD6AM7BI4E4gQ1BYgF3AUvBoIG1gYpB3wHMPiE+Nf4Kvl++dH5JPp4+sv6Hvty+8X7GPxs/L/8Ev1m/bn9DP5g/rP+Bv9a/63/AABTAKYA+gBNAaAB9AFHApoC7gJBA5QD6AM7BI4E4gQ1BYgF3AUvBoIG1gYpB3wHMPiE+Nf4Kvl++dH5JPp4+sv6Hvty+8X7GPxs/L/8Ev1m/bn9DP5g/rP+Bv9a/63/AABTAKYA+gBNAaAB9AFHApoC7gJBA5QD6AM7BI4E4gQ1BYgF3AUvBoIG1gYpB3wHMPiE+Nf4Kvl++dH5JPp4+sv6Hvty+8X7GPxs/L/8Ev1m/bn9DP5g/rP+Bv9a/63/AABTAKYA+gBNAaAB9AFHApoC7gJBA5QD6AM7BI4E4gQ1BYgF3AUvBoIG1gYpB3wH"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "serverContent": {
+          "turnComplete": true
+        }
+      },
+      {
+        "sessionResumptionUpdate": {
+          "newHandle": "fixture-handle-connectivity-0001",
+          "resumable": true
+        }
+      }
+    ],
+    "after_activity_end": [
+      {
+        "serverContent": {
+          "outputTranscription": {
+            "text": "Hello back to you as well."
+          }
+        }
+      },
+      {
+        "serverContent": {
+          "modelTurn": {
+            "parts": [
+              {
+                "inlineData": {
+                  "mimeType": "audio/pcm;rate=24000",
+                  "data": "MPgq+ST6HvsY/BL9DP4G/wAA+gD0Ae4C6APiBNwF1gYw+Cr5JPoe+xj8Ev0M/gb/AAD6APQB7gLoA+IE3AXWBjD4Kvkk+h77GPwS/Qz+Bv8AAPoA9AHuAugD4gTcBdYGMPgq+ST6HvsY/BL9DP4G/wAA+gD0Ae4C6APiBNwF1gYw+Cr5JPoe+xj8Ev0M/gb/AAD6APQB7gLoA+IE3AXWBjD4Kvkk+h77GPwS/Qz+Bv8AAPoA9AHuAugD4gTcBdYGMPgq+ST6HvsY/BL9DP4G/wAA+gD0Ae4C6APiBNwF1gYw+Cr5JPoe+xj8Ev0M/gb/AAD6APQB7gLoA+IE3AXWBjD4Kvkk+h77GPwS/Qz+Bv8AAPoA9AHuAugD4gTcBdYGMPgq+ST6HvsY/BL9DP4G/wAA+gD0Ae4C6APiBNwF1gYw+Cr5JPoe+xj8Ev0M/gb/AAD6APQB7gLoA+IE3AXWBjD4Kvkk+h77GPwS/Qz+Bv8AAPoA9AHuAugD4gTcBdYGMPgq+ST6HvsY/BL9DP4G/wAA+gD0Ae4C6APiBNwF1gYw+Cr5JPoe+xj8Ev0M/gb/AAD6APQB7gLoA+IE3AXWBjD4Kvkk+h77GPwS/Qz+Bv8AAPoA9AHuAugD4gTcBdYG"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "serverContent": {
+          "turnComplete": true
+        }
+      },
+      {
+        "sessionResumptionUpdate": {
+          "newHandle": "fixture-handle-turn-0002",
+          "resumable": true
+        }
+      }
+    ]
+  }
+}

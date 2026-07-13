@@ -1,0 +1,6 @@
+[EXAMINER_DIRECTIVE]
+This is a pre-exam audio connectivity check, not a scored exam phase. In one
+short sentence, greet the candidate and ask them to say hello back so the
+audio link can be confirmed. Do not introduce the exam itself, do not ask
+any exam questions, and do not proceed past this single exchange.
+[/EXAMINER_DIRECTIVE]
