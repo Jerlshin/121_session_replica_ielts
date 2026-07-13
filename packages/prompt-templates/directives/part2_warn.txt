@@ -1,0 +1,5 @@
+[EXAMINER_DIRECTIVE]
+Fewer than five seconds of the candidate's two minutes remain. If they are
+mid-sentence when time runs out, let them finish the clause they are on —
+do not cut off a word. Do not ask a new question. Prepare to close the turn.
+[/EXAMINER_DIRECTIVE]

@@ -71,8 +71,16 @@ def test_ptt_turn_gets_relayed_gemini_reply_and_persists_candidate_audio():
     fake = FakeGeminiLiveServerHandle(FIXTURE).start()
     original_ws_url = settings.gemini_live_ws_url
     original_api_key = settings.gemini_api_key
+    original_intro_turns = settings.intro_turns
     settings.gemini_live_ws_url = fake.url
     settings.gemini_api_key = "fixture-unused-key"
+    # This test only exercises the Phase 2 relay/persistence guarantees, not
+    # Phase 3's FSM progression (that's tests/integration/
+    # test_full_exam_session_flow.py) — a huge intro-turn budget keeps the
+    # single PTT turn below from tripping an INTRO->PART1_TOPIC_A
+    # auto-advance, which would inject a second directive and cascade a
+    # second scripted reply on top of the one this test asserts on.
+    settings.intro_turns = 1_000_000
 
     try:
         with TestClient(app) as client:
@@ -91,9 +99,10 @@ def test_ptt_turn_gets_relayed_gemini_reply_and_persists_candidate_audio():
                 connected = ws.receive_json()
                 assert connected == {"type": "connected", "session_id": session_id}
 
-                # The Phase 2 "say hello back" scripted connectivity turn
-                # (Spec 04 §2) fires automatically on a fresh connection,
-                # before any PTT — no client action needed to trigger it.
+                # The Phase 3 intro directive (Spec 02 §6.2) fires
+                # automatically on a fresh connection, before any PTT — no
+                # client action needed to trigger it. It supersedes Phase
+                # 2's placeholder "say hello back" connectivity check.
                 # Frame classification: JSON control messages vs. relayed
                 # binary audio; order isn't asserted since it isn't a
                 # contract this system makes (only "eventually arrives").
@@ -166,4 +175,5 @@ def test_ptt_turn_gets_relayed_gemini_reply_and_persists_candidate_audio():
     finally:
         settings.gemini_live_ws_url = original_ws_url
         settings.gemini_api_key = original_api_key
+        settings.intro_turns = original_intro_turns
         fake.stop()

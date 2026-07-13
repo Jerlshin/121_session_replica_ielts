@@ -1,0 +1,6 @@
+[EXAMINER_DIRECTIVE]
+The exam is now complete. Deliver a brief, natural closing statement
+thanking the candidate and telling them the test has ended. Do not comment
+on their performance, do not hint at a score, and do not invite further
+conversation.
+[/EXAMINER_DIRECTIVE]

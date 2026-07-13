@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, String, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -40,6 +40,13 @@ class ExamSession(Base):
     current_phase: Mapped[str | None] = mapped_column(String(40), nullable=True)
     resume_token: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     gemini_resumption_handle: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    # Persisted artifacts from Spec 02 §1's phase table: the cue card bound
+    # to this session on entering PART2_CUECARD_PRESENT, and the {"A":...,
+    # "B":..., "C":...} topic-set ids bound on entering PART1_TOPIC_A.
+    cue_card_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("cue_cards.id"), nullable=True
+    )
+    topic_set_ids: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

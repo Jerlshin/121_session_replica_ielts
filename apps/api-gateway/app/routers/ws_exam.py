@@ -4,6 +4,7 @@ import logging
 import time
 import uuid
 
+from exam_fsm import ExamPhase
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, WebSocketException, status
 from fastapi.concurrency import run_in_threadpool
 from jose import JWTError, jwt
@@ -13,6 +14,7 @@ from websockets.exceptions import ConnectionClosed
 from app.config import settings
 from app.db import AsyncSessionLocal
 from app.models import AudioSegment, ExamSession
+from app.services.exam_orchestrator import ExamOrchestrator
 from app.services.gemini_bridge import (
     AudioDelta,
     GeminiLiveBridge,
@@ -22,7 +24,6 @@ from app.services.gemini_bridge import (
     TranscriptDelta,
     TurnComplete,
     load_base_persona,
-    load_directive,
 )
 from app.services.media_tap import persist_turn_audio
 
@@ -60,7 +61,9 @@ async def _persist_resumption_handle(session_id: uuid.UUID, handle: str) -> None
             await db.commit()
 
 
-async def _flush_turn(session_id: uuid.UUID, turn_id: uuid.UUID, pcm_bytes: bytes) -> dict:
+async def _flush_turn(
+    session_id: uuid.UUID, turn_id: uuid.UUID, pcm_bytes: bytes, exam_phase: ExamPhase
+) -> dict:
     seq = 1  # single flush per turn (Spec 01 §4.2); retries reuse the same
     # seq so the insert below is idempotent rather than a duplicate write.
     metadata = await run_in_threadpool(persist_turn_audio, session_id, turn_id, seq, pcm_bytes)
@@ -75,6 +78,7 @@ async def _flush_turn(session_id: uuid.UUID, turn_id: uuid.UUID, pcm_bytes: byte
                 storage_key=metadata["storage_key"],
                 checksum=metadata["checksum"],
                 byte_size=metadata["byte_size"],
+                exam_phase=exam_phase.value,
             )
             .on_conflict_do_nothing(constraint="uq_audio_segment_key")
         )
@@ -85,13 +89,20 @@ async def _flush_turn(session_id: uuid.UUID, turn_id: uuid.UUID, pcm_bytes: byte
 
 
 async def _flush_turn_in_background(
-    outbox: asyncio.Queue, session_id: uuid.UUID, turn_id: uuid.UUID, pcm_bytes: bytes
+    outbox: asyncio.Queue,
+    session_id: uuid.UUID,
+    turn_id: uuid.UUID,
+    pcm_bytes: bytes,
+    orchestrator: ExamOrchestrator,
+    exam_phase: ExamPhase,
 ) -> None:
     """Runs off the relay's critical path (Spec 01 §4.2: "async append...
     non-blocking") so persisting the candidate's turn audio never delays
-    Gemini's reply reaching the client."""
+    Gemini's reply reaching the client. Always reports back to the
+    orchestrator (success or failure) so FINALIZING's flush-drain watchdog
+    (Spec 02 §1) can never hang on a turn that failed to persist."""
     try:
-        metadata = await _flush_turn(session_id, turn_id, pcm_bytes)
+        metadata = await _flush_turn(session_id, turn_id, pcm_bytes, exam_phase)
         await outbox.put(
             {
                 "type": "turn_complete",
@@ -102,19 +113,23 @@ async def _flush_turn_in_background(
         )
     except Exception:
         logger.exception("media flush failed session=%s turn=%s", session_id, turn_id)
+    finally:
+        orchestrator.on_turn_flush_complete(turn_id)
 
 
 @router.websocket("/ws/exam/{session_id}")
 async def exam_media_loopback(
     websocket: WebSocket, session_id: uuid.UUID, token: str = Query(...)
 ) -> None:
-    """Phase 2 Gemini Live bridge (Spec 04 §2): PTT press/hold/release
+    """The live exam room (Spec 04 §2 Phases 2-3): PTT press/hold/release
     drives activityStart/audio/activityEnd against a real Gemini Live
     connection (VAD disabled, Spec 01 §4.1 / CLAUDE.md rule 2); Gemini's
     audio + caption deltas are relayed back to the client as they arrive.
     Candidate audio is still tapped to object storage (Spec 01 §4.2/§5.5),
     but that write now runs in the background so it can never add to the
-    PTT-release -> first-audible-reply latency budget (Spec 01 §4.4).
+    PTT-release -> first-audible-reply latency budget (Spec 01 §4.4). An
+    `ExamOrchestrator` (Phase 3) drives phase transitions, Part 2 timer
+    watchdogs, and directive injection on top of this relay.
     """
     resumption_handle = await _authenticate(token, session_id)
     await websocket.accept()
@@ -134,11 +149,13 @@ async def exam_media_loopback(
     await outbox.put({"type": "connected", "session_id": str(session_id)})
     if resumption_handle:
         await outbox.put({"type": "resumed", "session_id": str(session_id)})
-    else:
-        # Phase 2 exit criterion: a minimal single-turn scripted
-        # conversation proving the bridge is wired end-to-end (Spec 04 §2).
-        connectivity_directive = load_directive(settings.prompt_templates_dir, "connectivity_test")
-        await bridge.inject_directive(connectivity_directive)
+
+    # Phase 3 (Spec 04 §2): drives the real exam FSM — auto-passing the
+    # not-yet-built device-check/ID-verification UI into INTRO on a fresh
+    # session, or re-anchoring guardrails and resuming any live Part 2
+    # watchdog if the session already has phase history.
+    orchestrator = ExamOrchestrator(session_id=session_id, bridge=bridge, outbox=outbox)
+    await orchestrator.start()
 
     turn_id: uuid.UUID | None = None
     buffer = bytearray()
@@ -179,13 +196,25 @@ async def exam_media_loopback(
                     if turn_id is None:
                         continue
                     await bridge.send_activity_end()
+                    # Must run before on_activity_end(): it captures the
+                    # phase this turn was actually spoken in, before that
+                    # same activity_end potentially advances the phase
+                    # (Spec 03 §4 per-phase bucketing — see migration
+                    # 0005's docstring for why the ordering matters).
+                    turn_phase = orchestrator.on_turn_flush_started(turn_id)
+                    await orchestrator.on_activity_end()
                     turn_release_monotonic = time.monotonic()
                     awaiting_first_audio = True
                     asyncio.create_task(
-                        _flush_turn_in_background(outbox, session_id, turn_id, bytes(buffer))
+                        _flush_turn_in_background(
+                            outbox, session_id, turn_id, bytes(buffer), orchestrator, turn_phase
+                        )
                     )
                     turn_id = None
                     buffer = bytearray()
+
+                elif control_type == "cue_card_ack":
+                    await orchestrator.on_cue_card_ack()
 
             elif bytes_payload is not None:
                 if turn_id is None:
@@ -216,6 +245,7 @@ async def exam_media_loopback(
                 await outbox.put({"type": "transcript_delta", "text": event.text})
             elif isinstance(event, TurnComplete):
                 await outbox.put({"type": "gemini_turn_complete"})
+                await orchestrator.on_gemini_turn_complete()
             elif isinstance(event, Interrupted):
                 await outbox.put({"type": "interrupted"})
             elif isinstance(event, SessionResumptionUpdate):
@@ -248,4 +278,5 @@ async def exam_media_loopback(
     finally:
         await outbox.put(None)
         await asyncio.gather(writer_task, return_exceptions=True)
+        await orchestrator.close()
         await bridge.close()

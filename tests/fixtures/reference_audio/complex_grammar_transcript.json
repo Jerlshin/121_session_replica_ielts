@@ -1,0 +1,238 @@
+{
+  "description": "Syntactically complex: subordinate clauses, passive voice, relative clause, modal, conditional.",
+  "exam_phase": "PART3_DISCUSSION",
+  "turns": [
+    {
+      "words": [
+        {
+          "word": "although",
+          "start_ms": 0,
+          "end_ms": 250,
+          "confidence": 0.9
+        },
+        {
+          "word": "the",
+          "start_ms": 310,
+          "end_ms": 560,
+          "confidence": 0.9
+        },
+        {
+          "word": "report",
+          "start_ms": 620,
+          "end_ms": 870,
+          "confidence": 0.9
+        },
+        {
+          "word": "was",
+          "start_ms": 930,
+          "end_ms": 1180,
+          "confidence": 0.9
+        },
+        {
+          "word": "written",
+          "start_ms": 1240,
+          "end_ms": 1490,
+          "confidence": 0.9
+        },
+        {
+          "word": "by",
+          "start_ms": 1550,
+          "end_ms": 1800,
+          "confidence": 0.9
+        },
+        {
+          "word": "the",
+          "start_ms": 1860,
+          "end_ms": 2110,
+          "confidence": 0.9
+        },
+        {
+          "word": "manager",
+          "start_ms": 2170,
+          "end_ms": 2420,
+          "confidence": 0.9
+        },
+        {
+          "word": "who",
+          "start_ms": 2480,
+          "end_ms": 2730,
+          "confidence": 0.9
+        },
+        {
+          "word": "reviewed",
+          "start_ms": 2790,
+          "end_ms": 3040,
+          "confidence": 0.9
+        },
+        {
+          "word": "it",
+          "start_ms": 3100,
+          "end_ms": 3350,
+          "confidence": 0.9
+        },
+        {
+          "word": "carefully",
+          "start_ms": 3410,
+          "end_ms": 3660,
+          "confidence": 0.9
+        },
+        {
+          "word": "the",
+          "start_ms": 3720,
+          "end_ms": 3970,
+          "confidence": 0.9
+        },
+        {
+          "word": "team",
+          "start_ms": 4030,
+          "end_ms": 4280,
+          "confidence": 0.9
+        },
+        {
+          "word": "believed",
+          "start_ms": 4340,
+          "end_ms": 4590,
+          "confidence": 0.9
+        },
+        {
+          "word": "that",
+          "start_ms": 4650,
+          "end_ms": 4900,
+          "confidence": 0.9
+        },
+        {
+          "word": "the",
+          "start_ms": 4960,
+          "end_ms": 5210,
+          "confidence": 0.9
+        },
+        {
+          "word": "results",
+          "start_ms": 5270,
+          "end_ms": 5520,
+          "confidence": 0.9
+        },
+        {
+          "word": "could",
+          "start_ms": 5580,
+          "end_ms": 5830,
+          "confidence": 0.9
+        },
+        {
+          "word": "have",
+          "start_ms": 5890,
+          "end_ms": 6140,
+          "confidence": 0.9
+        },
+        {
+          "word": "been",
+          "start_ms": 6200,
+          "end_ms": 6450,
+          "confidence": 0.9
+        },
+        {
+          "word": "improved",
+          "start_ms": 6510,
+          "end_ms": 6760,
+          "confidence": 0.9
+        },
+        {
+          "word": "if",
+          "start_ms": 6820,
+          "end_ms": 7070,
+          "confidence": 0.9
+        },
+        {
+          "word": "more",
+          "start_ms": 7130,
+          "end_ms": 7380,
+          "confidence": 0.9
+        },
+        {
+          "word": "time",
+          "start_ms": 7440,
+          "end_ms": 7690,
+          "confidence": 0.9
+        },
+        {
+          "word": "had",
+          "start_ms": 7750,
+          "end_ms": 8000,
+          "confidence": 0.9
+        },
+        {
+          "word": "been",
+          "start_ms": 8060,
+          "end_ms": 8310,
+          "confidence": 0.9
+        },
+        {
+          "word": "given",
+          "start_ms": 8370,
+          "end_ms": 8620,
+          "confidence": 0.9
+        },
+        {
+          "word": "and",
+          "start_ms": 8680,
+          "end_ms": 8930,
+          "confidence": 0.9
+        },
+        {
+          "word": "the",
+          "start_ms": 8990,
+          "end_ms": 9240,
+          "confidence": 0.9
+        },
+        {
+          "word": "data",
+          "start_ms": 9300,
+          "end_ms": 9550,
+          "confidence": 0.9
+        },
+        {
+          "word": "which",
+          "start_ms": 9610,
+          "end_ms": 9860,
+          "confidence": 0.9
+        },
+        {
+          "word": "was",
+          "start_ms": 9920,
+          "end_ms": 10170,
+          "confidence": 0.9
+        },
+        {
+          "word": "collected",
+          "start_ms": 10230,
+          "end_ms": 10480,
+          "confidence": 0.9
+        },
+        {
+          "word": "should",
+          "start_ms": 10540,
+          "end_ms": 10790,
+          "confidence": 0.9
+        },
+        {
+          "word": "be",
+          "start_ms": 10850,
+          "end_ms": 11100,
+          "confidence": 0.9
+        },
+        {
+          "word": "analyzed",
+          "start_ms": 11160,
+          "end_ms": 11410,
+          "confidence": 0.9
+        },
+        {
+          "word": "again",
+          "start_ms": 11470,
+          "end_ms": 11720,
+          "confidence": 0.9
+        }
+      ]
+    }
+  ]
+}

@@ -40,5 +40,34 @@ class Settings(BaseSettings):
 
     prompt_templates_dir: Path = _REPO_ROOT / "packages" / "prompt-templates"
 
+    # Exam FSM (Spec 02 §3.3, §6.3, Spec 04 §2 Phase 3). Part 2's timers are
+    # hard, non-negotiable exam-format durations in production; tests
+    # override these to sub-second values so CI never waits on a real
+    # 60s/120s clock (same pattern as gemini_live_ws_url being swapped for a
+    # fixture server in tests).
+    part2_prep_seconds: float = 60
+    part2_long_turn_seconds: float = 120
+    part2_long_turn_warn_at_seconds: float = 115
+
+    # Soft phase exits (Spec 02 §1 "Soft target") are approximated by a
+    # fixed completed-turn budget rather than real conversational-arc
+    # detection (out of scope for Phase 3) — see Spec 04 build notes.
+    intro_turns: int = 1
+    part1_topic_turns: int = 4
+    part2_roundoff_turns: int = 2
+    part3_discussion_turns: int = 6
+    reanchor_every_n_turns: int = 6
+
+    finalizing_watchdog_seconds: float = 60
+
+    # Grading pipeline trigger (Spec 03 §2.1) — a producer-only broker
+    # connection, not a dependency on apps/worker's actual task code (see
+    # app/services/grading_trigger.py).
+    celery_broker_url: str = "amqp://ielts:ielts@localhost:5672//"
+
+    # Internal/ops debug surface (Spec 04 §2 Phase 5) — not candidate-
+    # facing, so protected by a shared token rather than candidate JWT auth.
+    internal_debug_token: str = "dev-only-internal-debug-token-change-me"
+
 
 settings = Settings()

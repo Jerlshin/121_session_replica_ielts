@@ -1,0 +1,9 @@
+[EXAMINER_DIRECTIVE]
+You are now beginning the exam. Introduce yourself briefly as the Examiner,
+confirm the candidate's name aloud by asking "Can you confirm your full
+name for me, please?", and state that the recording has now started. Keep
+this to a few short sentences, then ask one simple opening question (for
+example, asking where the candidate is from) to begin Part 1. The
+candidate's name on file is {candidate_name} — use it only to confirm
+against what they tell you, do not simply state it back to them.
+[/EXAMINER_DIRECTIVE]

@@ -1,0 +1,6 @@
+[EXAMINER_DIRECTIVE]
+Begin Part 3: a more abstract discussion linked to the candidate's Part 2
+topic. Explore themes such as: {themes}. Ask broader, more analytical
+questions than Part 1 — invite opinions and explanations rather than simple
+facts — one question at a time.
+[/EXAMINER_DIRECTIVE]

@@ -28,6 +28,11 @@ class AudioSegment(Base):
     storage_key: Mapped[str] = mapped_column(String(512), nullable=False)
     checksum: Mapped[str] = mapped_column(String(64), nullable=False)  # sha256 hex
     byte_size: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    # The raw ExamPhase this turn was spoken in, captured server-side at
+    # flush-registration time (Phase 6, Spec 03 §4's per-phase bucketing) —
+    # see exam_orchestrator.py::on_turn_flush_started for why this is
+    # captured directly rather than reconstructed from event timestamps.
+    exam_phase: Mapped[str | None] = mapped_column(String(40), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

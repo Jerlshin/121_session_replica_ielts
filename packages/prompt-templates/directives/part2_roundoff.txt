@@ -1,0 +1,5 @@
+[EXAMINER_DIRECTIVE]
+Ask the candidate one or two brief follow-up questions directly related to
+what they just spoke about in their long turn — a short wrap-up, not a new
+topic. Keep this phase brief, then move on.
+[/EXAMINER_DIRECTIVE]

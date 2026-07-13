@@ -1,0 +1,49 @@
+{
+  "_notice": "TEST-ONLY PLACEHOLDER. This is generic, self-authored descriptor text used solely to exercise rubric_assets.load_rubric_reference() in tests — it is NOT official Cambridge/IDP/British Council IELTS band-descriptor wording, and must never be treated as such. The real, licensed asset is injected via the secret store at deploy time (Spec 01 §7) and is never committed to this repository.",
+  "criteria": {
+    "fluency_coherence": {
+      "9": "Speech flows with almost no hesitation; ideas are organized with a wide, natural range of connectives.",
+      "8": "Speech flows readily with only occasional, well-placed hesitation; discourse is well organized.",
+      "7": "Speaks at length without noticeable effort, with some hesitation over complex ideas; uses a range of connectives.",
+      "6": "Willing to speak at length though may lose coherence at times; uses basic connectives with some repetition.",
+      "5": "Usually maintains a flow of speech but relies on repetition and hesitation to keep going.",
+      "4": "Frequent hesitation, often self-corrects; basic linking of ideas only.",
+      "3": "Long pauses before most words; limited ability to link simple sentences.",
+      "2": "Speech mostly incomprehensible or limited to isolated words.",
+      "1": "No communication possible."
+    },
+    "lexical_resource": {
+      "9": "Wide vocabulary used naturally and precisely, including idiomatic language, with full flexibility.",
+      "8": "Wide vocabulary with fluent, flexible use to discuss a range of topics; occasional inaccuracy.",
+      "7": "Vocabulary sufficient to discuss topics at length with some flexibility and less common items.",
+      "6": "Vocabulary sufficient for the task, though word-choice errors occur when discussing unfamiliar topics.",
+      "5": "Limited vocabulary managed by simplifying ideas or expressing them imprecisely.",
+      "4": "Basic vocabulary used repetitively; limited ability to paraphrase.",
+      "3": "Very limited vocabulary, mostly isolated words on familiar topics.",
+      "2": "Vocabulary limited to a few memorized words or phrases.",
+      "1": "No effective vocabulary use."
+    },
+    "grammatical_range_accuracy": {
+      "9": "Full range of structures used naturally and accurately, with only rare, non-systematic errors.",
+      "8": "Wide range of structures used flexibly; error-free sentences are frequent.",
+      "7": "A range of complex structures with some flexibility; frequent error-free sentences.",
+      "6": "Mix of simple and complex structures with limited flexibility; errors do not impede meaning.",
+      "5": "Basic sentence forms used reasonably accurately; complex structures attempted but with frequent errors.",
+      "4": "Basic sentence forms only, with frequent errors that sometimes obscure meaning.",
+      "3": "Very limited grammatical control, mostly memorized phrases.",
+      "2": "Almost no grammatical control evident.",
+      "1": "No rateable grammatical output."
+    },
+    "pronunciation": {
+      "9": "Uses a full range of pronunciation features with precision; effortless to understand throughout.",
+      "8": "Wide range of pronunciation features used effectively; easy to understand throughout.",
+      "7": "Displays a range of pronunciation features with good control; generally easy to understand.",
+      "6": "Mix of pronunciation features with mixed control; understood despite some mispronunciation.",
+      "5": "Limited range of pronunciation features; some effort required by the listener at times.",
+      "4": "Limited pronunciation control causing frequent strain for the listener.",
+      "3": "Individual sounds and words often unclear; considerable listener effort required.",
+      "2": "Speech is largely unintelligible.",
+      "1": "No comprehensible pronunciation."
+    }
+  }
+}

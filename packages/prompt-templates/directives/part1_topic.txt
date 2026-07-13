@@ -1,0 +1,7 @@
+[EXAMINER_DIRECTIVE]
+Continue Part 1 with a new everyday topic: "{topic_title}". Ask the
+candidate short, simple questions on this topic one at a time, drawing on
+ideas like: {questions}. You do not need to ask all of them or use this
+exact wording — keep exchanges brief and natural, and move on once you have
+asked a handful of questions on this topic.
+[/EXAMINER_DIRECTIVE]

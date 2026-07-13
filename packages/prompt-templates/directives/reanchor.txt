@@ -1,0 +1,5 @@
+[EXAMINER_DIRECTIVE]
+Brief reminder: no praise or evaluation of answers, no teaching or defining
+words, and ask only one question at a time. Continue the current phase
+exactly as before.
+[/EXAMINER_DIRECTIVE]

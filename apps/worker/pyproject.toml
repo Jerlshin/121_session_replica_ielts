@@ -10,6 +10,27 @@ dependencies = [
     "psycopg2-binary>=2.9",
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
+    "boto3>=1.35",
+    "soundfile>=0.12",
+    "numpy>=1.26",
+    "httpx>=0.27",
+    # Phase 6 feature extraction (Spec 03 §4) — all four verified to
+    # install cleanly and run without any heavy/native toolchain.
+    "spacy>=3.8",
+    # en_core_web_sm, not en_core_web_trf (transformer model) — no Phase 6
+    # metric actually needs transformer-grade parsing accuracy, and a
+    # transformer model is impractical to install/run in most CI/dev
+    # environments. Documented deviation from Spec 01 §3's illustrative
+    # model name.
+    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
+    "wordfreq>=3.1",
+    "librosa>=0.11",
+    "pronouncing>=0.3",
+    # LLM Rubric Judge (Spec 03 §5) — the official Anthropic SDK is a thin
+    # httpx-based HTTP client (no heavy native/ML runtime), so unlike
+    # whisperx/languagetool/gop below it's a normal dependency, not an
+    # optional extra.
+    "anthropic>=0.40",
 ]
 
 [project.optional-dependencies]
@@ -17,13 +38,35 @@ dev = [
     "pytest>=8.3",
     "ruff>=0.7",
 ]
+# Self-hosted fallback ASR (Spec 03 §3) — heavy (torch + large-v3 model
+# download), so it is opt-in rather than a hard dependency of every
+# install. WhisperXTranscriptionProvider raises a clear error if this
+# extra isn't installed, rather than silently no-op-ing.
+whisperx = [
+    "whisperx",
+]
+# Grammar accuracy's primary checker (Spec 03 §4.3) — language_tool_python
+# is a lightweight pip package, but it wraps a JRE + a ~200MB LanguageTool
+# server jar downloaded on first real use. Opt-in for the same reason as
+# whisperx above; LanguageToolProvider raises a clear error without a JRE.
+languagetool = [
+    "language-tool-python>=2.8",
+]
+# Self-hosted pronunciation fallback (Spec 03 §4.4) — wav2vec2-CTC via
+# transformers/torch, forced-aligned via torchaudio, never exercised in CI
+# (no model download here).
+gop = [
+    "transformers>=4.44",
+    "torch>=2.3",
+    "torchaudio>=2.3",
+]
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["tasks*", "pipelines*"]
+include = ["tasks*", "pipelines*", "providers*"]
 
 [tool.ruff]
 line-length = 100

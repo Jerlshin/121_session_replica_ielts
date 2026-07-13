@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.db import engine
-from app.routers import auth, sessions, ws_exam
+from app.routers import auth, internal_debug, sessions, ws_exam
 
 
 @asynccontextmanager
@@ -31,6 +31,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(sessions.router)
 app.include_router(ws_exam.router)
+app.include_router(internal_debug.router)
 
 
 @app.get("/healthz")

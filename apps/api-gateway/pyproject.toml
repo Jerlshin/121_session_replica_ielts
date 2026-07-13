@@ -16,6 +16,7 @@ dependencies = [
     "python-multipart>=0.0.17",
     "boto3>=1.35",
     "websockets>=13.1",
+    "celery>=5.4",
 ]
 
 [project.optional-dependencies]

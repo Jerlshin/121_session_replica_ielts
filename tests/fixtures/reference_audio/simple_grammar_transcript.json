@@ -1,0 +1,148 @@
+{
+  "description": "Syntactically simple: short independent clauses only, no subordination \u2014 separated by real pauses (>=0.6s) so each parses as its own utterance.",
+  "exam_phase": "PART3_DISCUSSION",
+  "turns": [
+    {
+      "words": [
+        {
+          "word": "the",
+          "start_ms": 0,
+          "end_ms": 250,
+          "confidence": 0.9
+        },
+        {
+          "word": "dog",
+          "start_ms": 310,
+          "end_ms": 560,
+          "confidence": 0.9
+        },
+        {
+          "word": "ran",
+          "start_ms": 620,
+          "end_ms": 870,
+          "confidence": 0.9
+        },
+        {
+          "word": "fast",
+          "start_ms": 930,
+          "end_ms": 1180,
+          "confidence": 0.9
+        },
+        {
+          "word": "the",
+          "start_ms": 2040,
+          "end_ms": 2290,
+          "confidence": 0.9
+        },
+        {
+          "word": "cat",
+          "start_ms": 2350,
+          "end_ms": 2600,
+          "confidence": 0.9
+        },
+        {
+          "word": "slept",
+          "start_ms": 2660,
+          "end_ms": 2910,
+          "confidence": 0.9
+        },
+        {
+          "word": "the",
+          "start_ms": 3770,
+          "end_ms": 4020,
+          "confidence": 0.9
+        },
+        {
+          "word": "sun",
+          "start_ms": 4080,
+          "end_ms": 4330,
+          "confidence": 0.9
+        },
+        {
+          "word": "was",
+          "start_ms": 4390,
+          "end_ms": 4640,
+          "confidence": 0.9
+        },
+        {
+          "word": "bright",
+          "start_ms": 4700,
+          "end_ms": 4950,
+          "confidence": 0.9
+        },
+        {
+          "word": "the",
+          "start_ms": 5810,
+          "end_ms": 6060,
+          "confidence": 0.9
+        },
+        {
+          "word": "birds",
+          "start_ms": 6120,
+          "end_ms": 6370,
+          "confidence": 0.9
+        },
+        {
+          "word": "sang",
+          "start_ms": 6430,
+          "end_ms": 6680,
+          "confidence": 0.9
+        },
+        {
+          "word": "the",
+          "start_ms": 7540,
+          "end_ms": 7790,
+          "confidence": 0.9
+        },
+        {
+          "word": "children",
+          "start_ms": 7850,
+          "end_ms": 8100,
+          "confidence": 0.9
+        },
+        {
+          "word": "played",
+          "start_ms": 8160,
+          "end_ms": 8410,
+          "confidence": 0.9
+        },
+        {
+          "word": "the",
+          "start_ms": 9270,
+          "end_ms": 9520,
+          "confidence": 0.9
+        },
+        {
+          "word": "teacher",
+          "start_ms": 9580,
+          "end_ms": 9830,
+          "confidence": 0.9
+        },
+        {
+          "word": "smiled",
+          "start_ms": 9890,
+          "end_ms": 10140,
+          "confidence": 0.9
+        },
+        {
+          "word": "the",
+          "start_ms": 11000,
+          "end_ms": 11250,
+          "confidence": 0.9
+        },
+        {
+          "word": "class",
+          "start_ms": 11310,
+          "end_ms": 11560,
+          "confidence": 0.9
+        },
+        {
+          "word": "ended",
+          "start_ms": 11620,
+          "end_ms": 11870,
+          "confidence": 0.9
+        }
+      ]
+    }
+  ]
+}

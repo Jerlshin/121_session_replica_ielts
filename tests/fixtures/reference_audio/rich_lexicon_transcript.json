@@ -1,0 +1,190 @@
+{
+  "description": "Diverse, lower-frequency vocabulary (high MTLD/MATTR, more C1/C2-band-proxy words, higher rarity ratio).",
+  "exam_phase": "PART3_DISCUSSION",
+  "turns": [
+    {
+      "words": [
+        {
+          "word": "I",
+          "start_ms": 0,
+          "end_ms": 250,
+          "confidence": 0.9
+        },
+        {
+          "word": "find",
+          "start_ms": 310,
+          "end_ms": 560,
+          "confidence": 0.9
+        },
+        {
+          "word": "my",
+          "start_ms": 620,
+          "end_ms": 870,
+          "confidence": 0.9
+        },
+        {
+          "word": "occupation",
+          "start_ms": 930,
+          "end_ms": 1180,
+          "confidence": 0.9
+        },
+        {
+          "word": "genuinely",
+          "start_ms": 1240,
+          "end_ms": 1490,
+          "confidence": 0.9
+        },
+        {
+          "word": "fulfilling",
+          "start_ms": 1550,
+          "end_ms": 1800,
+          "confidence": 0.9
+        },
+        {
+          "word": "colleagues",
+          "start_ms": 1860,
+          "end_ms": 2110,
+          "confidence": 0.9
+        },
+        {
+          "word": "collaborate",
+          "start_ms": 2170,
+          "end_ms": 2420,
+          "confidence": 0.9
+        },
+        {
+          "word": "meticulously",
+          "start_ms": 2480,
+          "end_ms": 2730,
+          "confidence": 0.9
+        },
+        {
+          "word": "articulate",
+          "start_ms": 2790,
+          "end_ms": 3040,
+          "confidence": 0.9
+        },
+        {
+          "word": "innovative",
+          "start_ms": 3100,
+          "end_ms": 3350,
+          "confidence": 0.9
+        },
+        {
+          "word": "solutions",
+          "start_ms": 3410,
+          "end_ms": 3660,
+          "confidence": 0.9
+        },
+        {
+          "word": "and",
+          "start_ms": 3720,
+          "end_ms": 3970,
+          "confidence": 0.9
+        },
+        {
+          "word": "cultivate",
+          "start_ms": 4030,
+          "end_ms": 4280,
+          "confidence": 0.9
+        },
+        {
+          "word": "a",
+          "start_ms": 4340,
+          "end_ms": 4590,
+          "confidence": 0.9
+        },
+        {
+          "word": "remarkably",
+          "start_ms": 4650,
+          "end_ms": 4900,
+          "confidence": 0.9
+        },
+        {
+          "word": "cohesive",
+          "start_ms": 4960,
+          "end_ms": 5210,
+          "confidence": 0.9
+        },
+        {
+          "word": "atmosphere",
+          "start_ms": 5270,
+          "end_ms": 5520,
+          "confidence": 0.9
+        },
+        {
+          "word": "that",
+          "start_ms": 5580,
+          "end_ms": 5830,
+          "confidence": 0.9
+        },
+        {
+          "word": "I",
+          "start_ms": 5890,
+          "end_ms": 6140,
+          "confidence": 0.9
+        },
+        {
+          "word": "thoroughly",
+          "start_ms": 6200,
+          "end_ms": 6450,
+          "confidence": 0.9
+        },
+        {
+          "word": "appreciate",
+          "start_ms": 6510,
+          "end_ms": 6760,
+          "confidence": 0.9
+        },
+        {
+          "word": "and",
+          "start_ms": 6820,
+          "end_ms": 7070,
+          "confidence": 0.9
+        },
+        {
+          "word": "admire",
+          "start_ms": 7130,
+          "end_ms": 7380,
+          "confidence": 0.9
+        },
+        {
+          "word": "despite",
+          "start_ms": 7440,
+          "end_ms": 7690,
+          "confidence": 0.9
+        },
+        {
+          "word": "occasional",
+          "start_ms": 7750,
+          "end_ms": 8000,
+          "confidence": 0.9
+        },
+        {
+          "word": "ambiguous",
+          "start_ms": 8060,
+          "end_ms": 8310,
+          "confidence": 0.9
+        },
+        {
+          "word": "or",
+          "start_ms": 8370,
+          "end_ms": 8620,
+          "confidence": 0.9
+        },
+        {
+          "word": "convoluted",
+          "start_ms": 8680,
+          "end_ms": 8930,
+          "confidence": 0.9
+        },
+        {
+          "word": "challenges",
+          "start_ms": 8990,
+          "end_ms": 9240,
+          "confidence": 0.9
+        }
+      ]
+    }
+  ]
+}

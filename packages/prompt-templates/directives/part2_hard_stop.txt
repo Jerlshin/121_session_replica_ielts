@@ -1,0 +1,6 @@
+[EXAMINER_DIRECTIVE]
+Time is up. Say, in your own natural examiner voice:
+"Thank you, that's the end of your two minutes."
+Then stop talking and wait. Do not summarize their answer. Do not comment
+on quality. Do not ask a follow-up here — that happens in the next phase.
+[/EXAMINER_DIRECTIVE]

@@ -1,0 +1,52 @@
+{
+  "_comment": "Phase 3 (Spec 04 §2) full-session fixture for tests/integration/test_full_exam_session_flow.py. The orchestrator only counts TurnComplete events to drive phase advancement — it never reads reply content — so both buckets replay the same generic 3-message reply (transcript, one short audio frame, turnComplete) regardless of which directive triggered them.",
+  "responses": {
+    "after_setup": [
+      { "setupComplete": {} }
+    ],
+    "after_directive": [
+      {
+        "serverContent": {
+          "outputTranscription": { "text": "Understood, proceeding as directed." }
+        }
+      },
+      {
+        "serverContent": {
+          "modelTurn": {
+            "parts": [
+              {
+                "inlineData": {
+                  "mimeType": "audio/pcm;rate=24000",
+                  "data": "MPiE+Nf4Kvl++dH5JPp4+sv6Hvty+8X7GPxs/L/8Ev1m/bn9DP5g/rP+Bv9a/63/AABTAKYA+gBNAaAB9AFHApoC7gJBA5QD6AM7BI4E4gQ1BYgF3AUvBoIG1gYpB3wH"
+                }
+              }
+            ]
+          }
+        }
+      },
+      { "serverContent": { "turnComplete": true } }
+    ],
+    "after_activity_end": [
+      {
+        "serverContent": {
+          "outputTranscription": { "text": "Thank you for your answer." }
+        }
+      },
+      {
+        "serverContent": {
+          "modelTurn": {
+            "parts": [
+              {
+                "inlineData": {
+                  "mimeType": "audio/pcm;rate=24000",
+                  "data": "MPgq+ST6HvsY/BL9DP4G/wAA+gD0Ae4C6APiBNwF1gYw+Cr5JPoe+xj8Ev0M/gb/AAD6APQB7gLoA+IE3AXWBjD4Kvkk+h77GPwS/Qz+Bv8AAPoA9AHuAugD4gTcBdYG"
+                }
+              }
+            ]
+          }
+        }
+      },
+      { "serverContent": { "turnComplete": true } }
+    ]
+  }
+}

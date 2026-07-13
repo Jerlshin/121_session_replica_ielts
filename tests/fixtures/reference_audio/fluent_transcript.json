@@ -1,0 +1,178 @@
+{
+  "description": "Fast, continuous Part 2 long-turn speech: no pause >= 0.3s, no filled pauses, no self-repair.",
+  "exam_phase": "PART2_LONG_TURN",
+  "turns": [
+    {
+      "words": [
+        {
+          "word": "I",
+          "start_ms": 0,
+          "end_ms": 180,
+          "confidence": 0.92
+        },
+        {
+          "word": "really",
+          "start_ms": 220,
+          "end_ms": 400,
+          "confidence": 0.92
+        },
+        {
+          "word": "enjoy",
+          "start_ms": 440,
+          "end_ms": 620,
+          "confidence": 0.92
+        },
+        {
+          "word": "hiking",
+          "start_ms": 660,
+          "end_ms": 840,
+          "confidence": 0.92
+        },
+        {
+          "word": "in",
+          "start_ms": 880,
+          "end_ms": 1060,
+          "confidence": 0.92
+        },
+        {
+          "word": "the",
+          "start_ms": 1090,
+          "end_ms": 1270,
+          "confidence": 0.92
+        },
+        {
+          "word": "mountains",
+          "start_ms": 1310,
+          "end_ms": 1490,
+          "confidence": 0.92
+        },
+        {
+          "word": "because",
+          "start_ms": 1530,
+          "end_ms": 1710,
+          "confidence": 0.92
+        },
+        {
+          "word": "the",
+          "start_ms": 1740,
+          "end_ms": 1920,
+          "confidence": 0.92
+        },
+        {
+          "word": "fresh",
+          "start_ms": 1960,
+          "end_ms": 2140,
+          "confidence": 0.92
+        },
+        {
+          "word": "air",
+          "start_ms": 2180,
+          "end_ms": 2360,
+          "confidence": 0.92
+        },
+        {
+          "word": "always",
+          "start_ms": 2400,
+          "end_ms": 2580,
+          "confidence": 0.92
+        },
+        {
+          "word": "makes",
+          "start_ms": 2620,
+          "end_ms": 2800,
+          "confidence": 0.92
+        },
+        {
+          "word": "me",
+          "start_ms": 2830,
+          "end_ms": 3010,
+          "confidence": 0.92
+        },
+        {
+          "word": "feel",
+          "start_ms": 3050,
+          "end_ms": 3230,
+          "confidence": 0.92
+        },
+        {
+          "word": "energized",
+          "start_ms": 3280,
+          "end_ms": 3460,
+          "confidence": 0.92
+        },
+        {
+          "word": "and",
+          "start_ms": 3500,
+          "end_ms": 3680,
+          "confidence": 0.92
+        },
+        {
+          "word": "although",
+          "start_ms": 3720,
+          "end_ms": 3900,
+          "confidence": 0.92
+        },
+        {
+          "word": "it",
+          "start_ms": 3930,
+          "end_ms": 4110,
+          "confidence": 0.92
+        },
+        {
+          "word": "can",
+          "start_ms": 4140,
+          "end_ms": 4320,
+          "confidence": 0.92
+        },
+        {
+          "word": "be",
+          "start_ms": 4350,
+          "end_ms": 4530,
+          "confidence": 0.92
+        },
+        {
+          "word": "tiring",
+          "start_ms": 4570,
+          "end_ms": 4750,
+          "confidence": 0.92
+        },
+        {
+          "word": "the",
+          "start_ms": 4780,
+          "end_ms": 4960,
+          "confidence": 0.92
+        },
+        {
+          "word": "views",
+          "start_ms": 5000,
+          "end_ms": 5180,
+          "confidence": 0.92
+        },
+        {
+          "word": "are",
+          "start_ms": 5210,
+          "end_ms": 5390,
+          "confidence": 0.92
+        },
+        {
+          "word": "absolutely",
+          "start_ms": 5440,
+          "end_ms": 5620,
+          "confidence": 0.92
+        },
+        {
+          "word": "worth",
+          "start_ms": 5660,
+          "end_ms": 5840,
+          "confidence": 0.92
+        },
+        {
+          "word": "it",
+          "start_ms": 5870,
+          "end_ms": 6050,
+          "confidence": 0.92
+        }
+      ]
+    }
+  ]
+}
