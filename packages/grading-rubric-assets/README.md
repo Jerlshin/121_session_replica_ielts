@@ -94,7 +94,7 @@ filesystem (`apps/worker/config.py::Settings.rubric_assets_dir`, default
 deployment should treat populating this path (or redirecting
 `rubric_assets_dir` to a mounted secret volume) as part of the secret
 provisioning process for `apps/worker`, with the same access controls as
-`ANTHROPIC_API_KEY`, `AZURE_SPEECH_KEY`, and `DEEPGRAM_API_KEY` — never
+`OPENAI_API_KEY`, `AZURE_SPEECH_KEY`, and `DEEPGRAM_API_KEY` — never
 committed, never logged, never returned in any API response.
 
 ## Testing

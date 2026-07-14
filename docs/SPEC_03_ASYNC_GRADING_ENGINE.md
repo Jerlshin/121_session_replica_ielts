@@ -187,7 +187,7 @@ Official IELTS band-descriptor wording is Cambridge/IDP/British Council's licens
 
 ### 5.2 Model choice for this stage
 
-The live conversational model (Gemini, chosen in Spec 01 for its duplex, audio-native, low-latency properties) and the grading judge are solving different problems with different requirements — real-time bidirectional audio vs. offline, meticulous, schema-constrained structured output over a large evidence payload. The codebase therefore defines a model-agnostic `ScoringLLM` interface (`score(payload: JudgeInput) -> JudgeOutput`), with the default production implementation calling **Claude** in structured-JSON mode for its strength at strict rubric adherence and reliably-shaped output. This is a swappable adapter, not a hard dependency — the interface boundary is what makes it swappable at all.
+The live conversational model (Gemini, chosen in Spec 01 for its duplex, audio-native, low-latency properties) and the grading judge are solving different problems with different requirements — real-time bidirectional audio vs. offline, meticulous, schema-constrained structured output over a large evidence payload. The codebase therefore defines a model-agnostic `ScoringLLM` interface (`score(payload: JudgeInput) -> JudgeOutput`), with the default production implementation calling **OpenAI** in structured-output mode for its strength at strict rubric adherence and reliably-shaped output. This is a swappable adapter, not a hard dependency — the interface boundary is what makes it swappable at all.
 
 ### 5.3 Judge input schema
 

@@ -17,7 +17,7 @@ the testing pyramid this monorepo actually runs in CI, per Spec 04 §3's
                     └─────────────────────────┘  manual and opt-in
                     ┌─────────────────────────┐
                     │   tests/integration/     │  Real Postgres + MinIO;
-                    │   (30 files)             │  Gemini/Deepgram/Azure/Claude
+                    │   (30 files)             │  Gemini/Deepgram/Azure/OpenAI
                     └─────────────────────────┘  always fixture/fake — never real
         ┌───────────────────────────────────────────────┐
         │  packages/exam-fsm/tests/  apps/api-gateway/    │  No real infra;
@@ -101,12 +101,12 @@ its own thread + event loop so it's reachable from a `TestClient`-driven
 FastAPI app running on a different loop/portal thread.
 
 **No integration test in this repository ever dials out to the real
-Gemini Live API, Deepgram, Azure, or Claude.** Every vendor call is either
+Gemini Live API, Deepgram, Azure, or OpenAI.** Every vendor call is either
 this fixture-replay server (Gemini) or an injected fixture/fake provider
 satisfying the real provider's interface (`FixtureTranscriptionProvider`-
 style doubles for Deepgram/WhisperX, `FixtureGrammarCheckProvider` for
 LanguageTool, `FixturePronunciationProvider` for Azure/GOP,
-`FixtureScoringLLM`/`CorpusScriptedScoringLLM` for Claude). This is what
+`FixtureScoringLLM`/`CorpusScriptedScoringLLM` for OpenAI). This is what
 `docs/SPEC_04_REPOSITORY_AND_BUILD_PLAN.md` §3 means by "vendor flakiness
 never blocks a merge" — real-vendor validation is a manual/nightly
 concern, never a PR-blocking one.

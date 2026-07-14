@@ -9,7 +9,7 @@ them appear in any WS text frame the client receives.
 All four vendor keys named in Spec 01 §8 (Gemini, Deepgram, Azure, the LLM
 Judge) are set here, even though only `gemini_api_key` lives on
 api-gateway's own Settings and is reachable from the WS code path this
-test exercises — apps/worker's three keys (deepgram/azure/anthropic) are
+test exercises — apps/worker's three keys (deepgram/azure/openai) are
 never loaded into this process at all today, so they can't leak via this
 path structurally. They're included anyway so this test still catches a
 future regression where a worker-side settings import gets wired into the
@@ -41,7 +41,7 @@ _DUMMY_SECRETS = {
     "gemini_api_key": "SECRET-GEMINI-do-not-leak-3f9a",
     "deepgram_api_key": "SECRET-DEEPGRAM-do-not-leak-71bd",
     "azure_speech_key": "SECRET-AZURE-do-not-leak-c204",
-    "anthropic_api_key": "SECRET-ANTHROPIC-do-not-leak-88e1",
+    "openai_api_key": "SECRET-OPENAI-do-not-leak-88e1",
 }
 
 
@@ -60,7 +60,7 @@ def test_no_vendor_secret_appears_in_any_ws_frame():
         "intro_turns": settings.intro_turns,
         "worker_deepgram": worker_settings.deepgram_api_key,
         "worker_azure": worker_settings.azure_speech_key,
-        "worker_anthropic": worker_settings.anthropic_api_key,
+        "worker_openai": worker_settings.openai_api_key,
     }
 
     settings.gemini_api_key = _DUMMY_SECRETS["gemini_api_key"]
@@ -68,7 +68,7 @@ def test_no_vendor_secret_appears_in_any_ws_frame():
     settings.intro_turns = 1_000_000
     worker_settings.deepgram_api_key = _DUMMY_SECRETS["deepgram_api_key"]
     worker_settings.azure_speech_key = _DUMMY_SECRETS["azure_speech_key"]
-    worker_settings.anthropic_api_key = _DUMMY_SECRETS["anthropic_api_key"]
+    worker_settings.openai_api_key = _DUMMY_SECRETS["openai_api_key"]
 
     captured_text_frames: list[str] = []
 
@@ -118,7 +118,7 @@ def test_no_vendor_secret_appears_in_any_ws_frame():
         settings.intro_turns = original["intro_turns"]
         worker_settings.deepgram_api_key = original["worker_deepgram"]
         worker_settings.azure_speech_key = original["worker_azure"]
-        worker_settings.anthropic_api_key = original["worker_anthropic"]
+        worker_settings.openai_api_key = original["worker_openai"]
         fake.stop()
 
     all_text = "\n".join(captured_text_frames)

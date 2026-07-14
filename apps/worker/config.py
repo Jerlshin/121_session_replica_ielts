@@ -57,8 +57,8 @@ class Settings(BaseSettings):
     # LLM Rubric Judge (Spec 03 §5). Primary and, per §5.2, the default
     # production ScoringLLM implementation; empty key fails loudly rather
     # than silently no-op-ing.
-    anthropic_api_key: str = ""
-    scoring_llm_model: str = "claude-opus-4-8"
+    openai_api_key: str = ""
+    scoring_llm_model: str = "gpt-5.1"
 
     # Spec 01 §7 / Spec 03 §5.1: the licensed band-descriptor asset is
     # injected via the secret store at deploy time and is deliberately

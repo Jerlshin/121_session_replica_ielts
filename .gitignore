@@ -8,6 +8,8 @@ __pycache__/
 venv/
 *.env
 .env
+.env.local
+.env*.local
 
 # Node / Next.js
 node_modules/

@@ -142,7 +142,7 @@ exists in this repository today:
   the latency budget if misplaced.
 - **`terraform/secrets/`**: A real secret-manager binding for
   `GEMINI_API_KEY`, `DEEPGRAM_API_KEY`, `AZURE_SPEECH_KEY`,
-  `ANTHROPIC_API_KEY`, `JWT_SECRET`, `INTERNAL_DEBUG_TOKEN`, and the
+  `OPENAI_API_KEY`, `JWT_SECRET`, `INTERNAL_DEBUG_TOKEN`, and the
   licensed rubric asset (see
   [`packages/grading-rubric-assets/README.md`](../packages/grading-rubric-assets/README.md)) —
   every one of these currently ships with an insecure, clearly-marked

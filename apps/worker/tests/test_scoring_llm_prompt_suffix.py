@@ -1,6 +1,6 @@
 """build_judge_system_prompt() unit tests (Spec 04 §2 Phase 9's judge-
 prompt tuning knob) — no network call, pins both the default (no-suffix)
-output as byte-identical to what ClaudeScoringLLM always rendered, and the
+output as byte-identical to what OpenAIScoringLLM always rendered, and the
 with-suffix calibration-directive path.
 """
 import sys

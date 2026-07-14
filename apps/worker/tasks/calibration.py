@@ -6,11 +6,11 @@ calibration_metrics.py).
 
 Default mode is a dry run against the bundled synthetic demo corpus
 (tests/fixtures/calibration_benchmark/benchmark_corpus_v1.json) using a
-deterministic `CorpusScriptedScoringLLM` -- no ANTHROPIC_API_KEY, no
+deterministic `CorpusScriptedScoringLLM` -- no OPENAI_API_KEY, no
 network, no licensed rubric asset required. This is what "runs
 successfully on local dev" means for this script. Pass `--live` to score
-the corpus with the real `ClaudeScoringLLM` instead (requires
-ANTHROPIC_API_KEY and the real licensed rubric asset, Spec 03 §5.1).
+the corpus with the real `OpenAIScoringLLM` instead (requires
+OPENAI_API_KEY and the real licensed rubric asset, Spec 03 §5.1).
 
 Not a Celery task -- this is an offline, operator-invoked calibration
 tool, not part of the live per-session grading DAG
@@ -32,7 +32,7 @@ from pathlib import Path
 from calibration_corpus import CorpusScriptedScoringLLM, DEFAULT_CORPUS_PATH, load_benchmark_corpus
 from calibration_report import CalibrationConfig, CalibrationReport, run_calibration
 from config import settings
-from providers.scoring_llm import ClaudeScoringLLM, ScoringLLM
+from providers.scoring_llm import OpenAIScoringLLM, ScoringLLM
 from rubric_assets import load_rubric_reference
 
 _DRY_RUN_RUBRIC_PLACEHOLDER = (
@@ -44,7 +44,7 @@ _DRY_RUN_RUBRIC_PLACEHOLDER = (
 def _build_scoring_llm(args: argparse.Namespace, corpus: list) -> ScoringLLM:
     if not args.live:
         return CorpusScriptedScoringLLM(corpus)
-    return ClaudeScoringLLM(model=args.model, system_prompt_suffix=args.prompt_directive)
+    return OpenAIScoringLLM(model=args.model, system_prompt_suffix=args.prompt_directive)
 
 
 def _resolve_rubric_reference(args: argparse.Namespace) -> str:
@@ -61,7 +61,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--live",
         action="store_true",
-        help="Score with the real ClaudeScoringLLM instead of the bundled dry-run scripted passes.",
+        help="Score with the real OpenAIScoringLLM instead of the bundled dry-run scripted passes.",
     )
     parser.add_argument(
         "--model", default=None, help="Overrides settings.scoring_llm_model (only meaningful with --live)."
@@ -97,8 +97,8 @@ def run(argv: list[str] | None = None) -> CalibrationReport:
     directly rather than parsing stdout."""
     args = _parse_args(argv)
 
-    if args.live and not settings.anthropic_api_key:
-        raise SystemExit("error: --live requires ANTHROPIC_API_KEY to be configured")
+    if args.live and not settings.openai_api_key:
+        raise SystemExit("error: --live requires OPENAI_API_KEY to be configured")
 
     corpus = load_benchmark_corpus(args.corpus)
     scoring_llm = _build_scoring_llm(args, corpus)

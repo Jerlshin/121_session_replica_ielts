@@ -1,7 +1,7 @@
 """synthesize_band_scores integration test (Spec 03 §2.2, §5, §5.6) — real
 Postgres, real feature_vectors/transcripts rows, a FixtureScoringLLM
-standing in for Claude (same posture as Phase 5/6's fixture providers —
-real vendor code stays behind ANTHROPIC_API_KEY and is never exercised in
+standing in for OpenAI (same posture as Phase 5/6's fixture providers —
+real vendor code stays behind OPENAI_API_KEY and is never exercised in
 CI). Proves: consistent feature-derived judge passes produce a persisted
 band_score_reports row with flag_for_human_review=False, while conflicting
 passes on a single criterion trip the human-review flag; both cases carry

@@ -113,7 +113,7 @@ graph TB
 | Backline transcription | **Deepgram Nova (streaming + batch)**, self-hosted **WhisperX (large-v3 + wav2vec2 forced alignment)** as fallback | Word-level timestamps + confidence at the accuracy grading needs; Gemini's own live transcript is for UI captions and turn-detection only, never the scoring source of truth (see §4.3) |
 | Pronunciation scoring | **Azure AI Speech Pronunciation Assessment**, self-hosted GOP fallback | Detailed in Spec 03 |
 | Grammar/NLP | **spaCy (`en_core_web_trf`), LanguageTool (self-hosted)** | Detailed in Spec 03 |
-| Rubric-synthesis LLM | **Model-agnostic `ScoringLLM` interface**, default implementation on Claude (structured JSON mode) | The live conversational model and the grading judge are different jobs with different requirements — duplex low-latency audio vs. meticulous structured-output rubric adherence — so the codebase must not hard-couple them to the same vendor. See Spec 03 §5. |
+| Rubric-synthesis LLM | **Model-agnostic `ScoringLLM` interface**, default implementation on OpenAI (structured output mode) | The live conversational model and the grading judge are different jobs with different requirements — duplex low-latency audio vs. meticulous structured-output rubric adherence — so the codebase must not hard-couple them to the same vendor. See Spec 03 §5. |
 | Observability | **OpenTelemetry → Prometheus/Grafana, Sentry, structured JSON logs → Loki** | |
 | IaC / deploy | **Docker Compose (dev), Kubernetes (prod), Terraform** | Gateway pods use `PodDisruptionBudget` + connection draining on deploy (§6.4) |
 | CI/CD | **GitHub Actions** | Contract tests against a Gemini Live fixture/replay harness gate every merge (Spec 04) |

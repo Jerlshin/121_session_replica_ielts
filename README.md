@@ -66,7 +66,7 @@ documented as intent (full detail in [`CLAUDE.md`](CLAUDE.md)):
                                            │ enqueue on COMPLETE
                                            ▼
                                   ┌────────────────────┐   Deepgram / Azure /
-                                  │  apps/worker         │◄──Claude / (fallback:
+                                  │  apps/worker         │◄──OpenAI / (fallback:
                                   │  (Celery grading      │   WhisperX / LanguageTool /
                                   │   engine)             │   self-hosted GOP)
                                   └────────────────────┘
@@ -155,7 +155,7 @@ cd apps/web && npm install && npm run dev
 Every setting has a working, insecure-by-design local-dev default — see
 each app's README for the full configuration reference and which secrets
 must be rotated before any non-local deployment (`GEMINI_API_KEY`,
-`DEEPGRAM_API_KEY`, `AZURE_SPEECH_KEY`, `ANTHROPIC_API_KEY`, `JWT_SECRET`,
+`DEEPGRAM_API_KEY`, `AZURE_SPEECH_KEY`, `OPENAI_API_KEY`, `JWT_SECRET`,
 `INTERNAL_DEBUG_TOKEN`, and the licensed rubric asset —
 [`packages/grading-rubric-assets/README.md`](packages/grading-rubric-assets/README.md)).
 
@@ -172,7 +172,7 @@ cd apps/web && npm run lint && npx tsc --noEmit && npm test                     
 ```
 
 No test in this repository ever dials out to a real vendor (Gemini,
-Deepgram, Azure, Claude) — every vendor integration is exercised through a
+Deepgram, Azure, OpenAI) — every vendor integration is exercised through a
 deterministic fixture or fake standing in behind the same interface the
 real implementation satisfies. Full testing-pyramid detail, fixture
 inventory, and CI wiring: [`tests/README.md`](tests/README.md).

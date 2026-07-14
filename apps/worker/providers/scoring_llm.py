@@ -1,11 +1,11 @@
 """The LLM Rubric Judge (Spec 03 §5): a model-agnostic `ScoringLLM`
-interface, default production implementation on Claude in structured JSON
-mode (Spec 03 §5.2). The live conversational model (Gemini) and this judge
-solve different problems — real-time duplex audio vs. offline,
+interface, default production implementation on OpenAI in structured
+output mode (Spec 03 §5.2). The live conversational model (Gemini) and
+this judge solve different problems — real-time duplex audio vs. offline,
 schema-constrained structured output over a large evidence payload — so
 this is a swappable adapter, never a hard dependency on one vendor.
 
-Real vendor code, gated behind `ANTHROPIC_API_KEY`; never exercised in CI
+Real vendor code, gated behind `OPENAI_API_KEY`; never exercised in CI
 (same posture as Deepgram/Azure/LanguageTool in earlier phases) — a
 deterministic `FixtureScoringLLM` (test-only) proves the reconciliation and
 report-synthesis pipeline instead.
@@ -117,22 +117,23 @@ def build_judge_system_prompt(rubric_reference: str, *, directive_suffix: str | 
     return prompt
 
 
-class ClaudeScoringLLM:
-    """Default production `ScoringLLM` (Spec 03 §5.2) — Claude in
-    structured JSON mode via `client.messages.parse()`. Real vendor call,
-    gated behind `ANTHROPIC_API_KEY`; never exercised in CI.
+class OpenAIScoringLLM:
+    """Default production `ScoringLLM` (Spec 03 §5.2) — OpenAI in
+    structured-output mode via `client.responses.parse()`. Real vendor
+    call, gated behind `OPENAI_API_KEY`; never exercised in CI.
 
     Spec 03 §5.6 asks for the two self-consistency passes to run "at low
-    temperature". As of the 4.7-generation Claude models (the default here
-    is `claude-opus-4-8`), the API no longer accepts `temperature`/`top_p`/
-    `top_k` at all — any value returns a 400. Two independent passes still
-    gives a genuine self-consistency signal, since Claude's default
-    sampling is not deterministic even without an explicit low-temperature
-    setting; this is a documented deviation forced by a vendor API change,
-    not an oversight.
+    temperature". The default model here (`gpt-5.1`) is a reasoning model,
+    and like Claude's 4.7-generation models the Responses API rejects
+    `temperature`/`top_p` for reasoning models — any value returns a 400.
+    Two independent passes still gives a genuine self-consistency signal,
+    since sampling is not deterministic even without an explicit
+    low-temperature setting; this is a documented deviation forced by a
+    vendor API constraint, not an oversight (same posture as the prior
+    Claude implementation).
     """
 
-    source_name = "claude"
+    source_name = "openai"
 
     def __init__(self, model: str | None = None, system_prompt_suffix: str | None = None) -> None:
         self._model = model or settings.scoring_llm_model
@@ -141,27 +142,28 @@ class ClaudeScoringLLM:
         self._system_prompt_suffix = system_prompt_suffix
 
     def score(self, judge_input: JudgeInput) -> JudgeOutput:
-        if not settings.anthropic_api_key:
-            raise ScoringLLMError("ANTHROPIC_API_KEY is not configured")
+        if not settings.openai_api_key:
+            raise ScoringLLMError("OPENAI_API_KEY is not configured")
 
-        import anthropic
+        import openai
 
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        client = openai.OpenAI(api_key=settings.openai_api_key)
         system_prompt = build_judge_system_prompt(
             judge_input.rubric_reference, directive_suffix=self._system_prompt_suffix
         )
 
         try:
-            response = client.messages.parse(
+            response = client.responses.parse(
                 model=self._model,
-                max_tokens=4096,
-                system=system_prompt,
-                messages=[{"role": "user", "content": judge_input.model_dump_json()}],
-                output_format=JudgeOutput,
+                input=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": judge_input.model_dump_json()},
+                ],
+                text_format=JudgeOutput,
             )
-        except anthropic.APIError as exc:
-            raise ScoringLLMError(f"Claude scoring request failed: {exc}") from exc
+        except openai.OpenAIError as exc:
+            raise ScoringLLMError(f"OpenAI scoring request failed: {exc}") from exc
 
-        if response.parsed_output is None:
-            raise ScoringLLMError("Claude did not return a schema-valid JudgeOutput")
-        return response.parsed_output
+        if response.output_parsed is None:
+            raise ScoringLLMError("OpenAI did not return a schema-valid JudgeOutput")
+        return response.output_parsed

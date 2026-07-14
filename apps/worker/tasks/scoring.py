@@ -26,7 +26,7 @@ from db import session_scope
 from job_status import mark_failed, mark_running, mark_succeeded
 from models import Candidate, ExamSession, FeatureVector
 from nlp_common import PHASE_BUCKET_ORDER, load_words_by_phase
-from providers.scoring_llm import ClaudeScoringLLM, JudgeInput, PhaseEvidence, ScoringLLM
+from providers.scoring_llm import JudgeInput, OpenAIScoringLLM, PhaseEvidence, ScoringLLM
 from reconciliation import self_consistency_reconciliation
 from rubric_assets import load_rubric_reference
 
@@ -106,9 +106,9 @@ def synthesize_band_scores(self, session_id: str, *, scoring_llm: ScoringLLM | N
 
     try:
         judge_input = _build_judge_input(session_uuid)
-        llm = scoring_llm or ClaudeScoringLLM()
+        llm = scoring_llm or OpenAIScoringLLM()
 
-        # Two independent passes (Spec 03 §5.6) — see ClaudeScoringLLM's
+        # Two independent passes (Spec 03 §5.6) — see OpenAIScoringLLM's
         # docstring for why these aren't literally low-temperature calls.
         pass_1 = llm.score(judge_input)
         pass_2 = llm.score(judge_input)

@@ -26,11 +26,11 @@ dependencies = [
     "wordfreq>=3.1",
     "librosa>=0.11",
     "pronouncing>=0.3",
-    # LLM Rubric Judge (Spec 03 §5) — the official Anthropic SDK is a thin
+    # LLM Rubric Judge (Spec 03 §5) — the official OpenAI SDK is a thin
     # httpx-based HTTP client (no heavy native/ML runtime), so unlike
     # whisperx/languagetool/gop below it's a normal dependency, not an
     # optional extra.
-    "anthropic>=0.40",
+    "openai>=1.50",
 ]
 
 [project.optional-dependencies]

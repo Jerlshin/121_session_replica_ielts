@@ -22,7 +22,7 @@ apps/api-gateway ──enqueue(grading.grade_exam_session)──► RabbitMQ ─
                                                                             │
                                           reads/writes shared Postgres ────┤
                                           reads/writes shared S3/MinIO ────┤
-                                          calls Deepgram/Azure/Claude ─────┘
+                                          calls Deepgram/Azure/OpenAI ─────┘
                                           (real vendor code, gated behind
                                            API keys, never exercised in CI)
 ```
@@ -111,7 +111,7 @@ apps/worker/
 │   ├── transcription.py          DeepgramTranscriptionProvider, WhisperXTranscriptionProvider
 │   ├── grammar_check.py          LanguageToolProvider
 │   ├── pronunciation.py          AzurePronunciationProvider, GOPFallbackProvider, librosa prosody proxy
-│   └── scoring_llm.py            ClaudeScoringLLM, JudgeInput/JudgeOutput schemas, prompt builder
+│   └── scoring_llm.py            OpenAIScoringLLM, JudgeInput/JudgeOutput schemas, prompt builder
 ├── pipelines/
 │   └── grading_pipeline.py       The DAG assembly described above
 └── tests/                        Unit tests (no real Postgres/broker/vendor calls)
@@ -205,9 +205,9 @@ and reconciles them.
 
 - **`ScoringLLM` protocol**: `score(judge_input: JudgeInput) -> JudgeOutput`
   plus a `source_name` — model-agnostic by design (Spec 03 §5.2).
-- **`ClaudeScoringLLM`**: the default production implementation, Claude in
-  structured JSON mode via `client.messages.parse()`, gated behind
-  `ANTHROPIC_API_KEY`, never exercised in CI. `build_judge_system_prompt()`
+- **`OpenAIScoringLLM`**: the default production implementation, OpenAI in
+  structured-output mode via `client.responses.parse()`, gated behind
+  `OPENAI_API_KEY`, never exercised in CI. `build_judge_system_prompt()`
   renders the fixed `JUDGE_SYSTEM_PROMPT` template against the licensed
   rubric text and optionally appends a `<<CALIBRATION_DIRECTIVE>>` block
   (Phase 9's prompt-tuning knob — unset in every non-calibration caller,
@@ -268,7 +268,7 @@ uses, and reports rater-vs-judge statistical agreement.
   `@app.task`, not registered in `celery_app.py`); an operator-invoked
   offline tool. Defaults to a zero-config dry run against the bundled
   corpus (`CorpusScriptedScoringLLM` — no API key, no network); `--live`
-  switches to the real `ClaudeScoringLLM`.
+  switches to the real `OpenAIScoringLLM`.
 
   ```bash
   cd apps/worker
@@ -308,8 +308,8 @@ app = Celery("ielts_grading_engine", broker=broker_url, backend=result_backend)
 | `azure_speech_key` / `azure_speech_region` / `azure_speech_timeout_s` | empty / `eastus` / `60.0` | |
 | `pronunciation_confidence_floor` | `0.7` | Pronunciation fallback gate |
 | `gop_model_name` | `facebook/wav2vec2-lv-60-espeak-cv-ft` | |
-| `anthropic_api_key` | `""` | Required for `ClaudeScoringLLM`; never required for the dry-run calibration path |
-| `scoring_llm_model` | `claude-opus-4-8` | |
+| `openai_api_key` | `""` | Required for `OpenAIScoringLLM`; never required for the dry-run calibration path |
+| `scoring_llm_model` | `gpt-5.1` | |
 | `rubric_assets_dir` | `packages/grading-rubric-assets` (repo-root-relative) | Deliberately never committed — see that package's README |
 | `self_consistency_band_disagreement_threshold` | `1.0` | Spec 03 §5.6; the Phase 9 CLI's `--reconciliation-threshold` overrides this per-run without touching production config |
 
@@ -318,7 +318,7 @@ app = Celery("ielts_grading_engine", broker=broker_url, backend=result_backend)
 Core (`pyproject.toml`): `celery[redis]`, `redis`, `sqlalchemy` +
 `psycopg2-binary`, `pydantic`/`pydantic-settings`, `boto3`, `soundfile`,
 `numpy`, `httpx`, `spacy` + `en_core_web_sm`, `wordfreq`, `librosa`,
-`pronouncing`, `anthropic` (a normal dependency — a thin `httpx`-based
+`pronouncing`, `openai` (a normal dependency — a thin `httpx`-based
 client, unlike the heavy extras below).
 
 Opt-in extras, each raising a clear, actionable error if invoked without
@@ -331,7 +331,7 @@ being installed (never silently no-op-ing):
 | `gop` | `transformers`, `torch`, `torchaudio` | `GOPFallbackProvider` |
 
 None of these three real-vendor code paths — nor Deepgram, Azure, or
-Claude — are exercised in CI; every test substitutes a deterministic
+OpenAI — are exercised in CI; every test substitutes a deterministic
 fixture/fake provider injected through the same interface the real
 implementation satisfies.
 
