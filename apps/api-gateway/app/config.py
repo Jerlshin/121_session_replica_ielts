@@ -53,12 +53,35 @@ class Settings(BaseSettings):
     part2_long_turn_seconds: float = 120
     part2_long_turn_warn_at_seconds: float = 115
 
+    # Part 1's real-exam "4-5 minutes combined" window (Spec 02 §1/§4),
+    # enforced as a hard floor+ceiling spanning PART1_TOPIC_A/B/C: the
+    # ceiling watchdog force-advances to Part 2 if still running at
+    # part1_max_seconds; the floor gates the final topic's own exit so the
+    # candidate can't leave Part 1 before part1_min_seconds has elapsed.
+    part1_min_seconds: float = 240
+    part1_max_seconds: float = 300
+
+    # Part 3's own "4-5 minute" band (Spec 02 §1/§4), used as the clamp
+    # range for the dynamically-computed remainder-of-total budget below.
+    part3_min_seconds: float = 240
+    part3_max_seconds: float = 300
+
+    # The real exam's overall 11-14 minute Speaking-section threshold (Spec
+    # 02 §4): Part 3's dynamic ceiling is computed as "whatever's left of
+    # exam_total_max_seconds", clamped into [part3_min_seconds,
+    # part3_max_seconds] — see exam_orchestrator._on_enter_phase.
+    exam_total_min_seconds: float = 660
+    exam_total_max_seconds: float = 840
+
     # Soft phase exits (Spec 02 §1 "Soft target") are approximated by a
     # fixed completed-turn budget rather than real conversational-arc
     # detection (out of scope for Phase 3) — see Spec 04 build notes.
     intro_turns: int = 1
     part1_topic_turns: int = 4
-    part2_roundoff_turns: int = 2
+    # Spec 02 §3.4: after either a voluntary release or the 120s hard
+    # cutoff, the examiner asks exactly one optional round-off question
+    # before moving to Part 3 — not a new topic, just a brief wrap-up.
+    part2_roundoff_turns: int = 1
     part3_discussion_turns: int = 6
     reanchor_every_n_turns: int = 6
 

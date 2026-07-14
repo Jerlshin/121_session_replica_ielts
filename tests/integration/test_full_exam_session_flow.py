@@ -13,6 +13,7 @@ import asyncio
 import struct
 import sys
 import time
+from contextlib import contextmanager
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "apps" / "api-gateway"))
@@ -57,6 +58,18 @@ EXPECTED_PHASE_SEQUENCE = [
 def _pcm16_frame(num_samples: int = 320, amplitude: int = 3000) -> bytes:
     samples = [int(amplitude * ((i % 32) / 32.0 - 0.5)) for i in range(num_samples)]
     return struct.pack(f"<{num_samples}h", *samples)
+
+
+def _count_audio_messages(fake: FakeGeminiLiveServerHandle) -> int:
+    """Counts frames that actually reached the fake Gemini server — the
+    observable proxy for "was gemini_bridge's force_mute_input() engaged".
+    A muted bridge never calls `_ws.send()` for audio at all (Spec 02
+    §3.3), so a stuck mute is directly visible here as a flat count."""
+    return sum(
+        1
+        for message in fake.received_messages
+        if "realtimeInput" in message and "audio" in message["realtimeInput"]
+    )
 
 
 def _send_ptt_turn(ws, num_frames: int = 2) -> None:
@@ -126,6 +139,7 @@ def test_full_exam_session_walks_every_phase_in_order():
         "part2_long_turn_warn_at_seconds": settings.part2_long_turn_warn_at_seconds,
         "intro_turns": settings.intro_turns,
         "part1_topic_turns": settings.part1_topic_turns,
+        "part1_min_seconds": settings.part1_min_seconds,
         "part2_roundoff_turns": settings.part2_roundoff_turns,
         "part3_discussion_turns": settings.part3_discussion_turns,
         "finalizing_watchdog_seconds": settings.finalizing_watchdog_seconds,
@@ -141,6 +155,11 @@ def test_full_exam_session_walks_every_phase_in_order():
     settings.part2_long_turn_warn_at_seconds = 2.9
     settings.intro_turns = 1
     settings.part1_topic_turns = 1
+    # Part 1's new 4-5 minute floor (Spec 02 §4) would otherwise block this
+    # test's single-PTT-per-topic walk from ever leaving PART1_TOPIC_C —
+    # disabled here since turn-budget progression, not real timing, is what
+    # this test exercises (see test_part1_floor_* below for the floor itself).
+    settings.part1_min_seconds = 0
     settings.part2_roundoff_turns = 1
     settings.part3_discussion_turns = 1
     settings.finalizing_watchdog_seconds = 5
@@ -221,6 +240,7 @@ def test_full_exam_session_walks_every_phase_in_order():
         settings.part2_long_turn_warn_at_seconds = original["part2_long_turn_warn_at_seconds"]
         settings.intro_turns = original["intro_turns"]
         settings.part1_topic_turns = original["part1_topic_turns"]
+        settings.part1_min_seconds = original["part1_min_seconds"]
         settings.part2_roundoff_turns = original["part2_roundoff_turns"]
         settings.part3_discussion_turns = original["part3_discussion_turns"]
         settings.finalizing_watchdog_seconds = original["finalizing_watchdog_seconds"]
@@ -236,3 +256,232 @@ def _wait_for_status_completed(session_id: str, *, timeout_s: float = 5.0) -> st
             return status
         time.sleep(0.05)
     return status
+
+
+@contextmanager
+def _override_settings(**overrides):
+    """Snapshots and restores just the settings a given test touches —
+    the same override/restore discipline as the big end-to-end test above,
+    factored out so each timing-specific test below only has to name the
+    handful of knobs it actually cares about."""
+    original = {key: getattr(settings, key) for key in overrides}
+    for key, value in overrides.items():
+        setattr(settings, key, value)
+    try:
+        yield
+    finally:
+        for key, value in original.items():
+            setattr(settings, key, value)
+
+
+def _login_and_create_session(client: TestClient, email: str) -> tuple[str, str]:
+    login_response = client.post(
+        "/auth/login", json={"email": email, "full_name": "Timing Test Candidate"}
+    )
+    token = login_response.json()["access_token"]
+    session_response = client.post("/sessions", headers={"Authorization": f"Bearer {token}"})
+    return token, session_response.json()["id"]
+
+
+def test_part1_ceiling_watchdog_forces_advance_to_part2_without_turn_budget():
+    """Spec 02 §4's "no more than 5 minutes" ceiling: even if the candidate
+    never gives enough turns to satisfy the per-topic budget, Part 1 must
+    still hand off to Part 2 once part1_max_seconds elapses — from any of
+    its three topic sub-phases, not just the last one."""
+    fake = FakeGeminiLiveServerHandle(FIXTURE).start()
+    try:
+        with _override_settings(
+            gemini_live_ws_url=fake.url,
+            gemini_api_key="fixture-unused-key",
+            intro_turns=1,
+            part1_topic_turns=1000,  # never reached by turn budget alone
+            part1_min_seconds=0,
+            part1_max_seconds=1.0,  # hard ceiling fires almost immediately
+        ):
+            with TestClient(app) as client:
+                token, session_id = _login_and_create_session(
+                    client, "part1-ceiling@example.com"
+                )
+                with client.websocket_connect(f"/ws/exam/{session_id}?token={token}") as ws:
+                    sequence = _wait_for_phase_count(session_id, 2, timeout_s=5.0)
+                    assert sequence[:2] == EXPECTED_PHASE_SEQUENCE[:2]
+
+                    _send_ptt_turn(ws)  # clears INTRO -> PART1_TOPIC_A
+                    sequence = _wait_for_phase_count(session_id, 3, timeout_s=5.0)
+                    assert sequence[:3] == EXPECTED_PHASE_SEQUENCE[:3]
+
+                    # No further PTT turns: PART1_TOPIC_A's own budget
+                    # (1000) is nowhere close to being reached, so only the
+                    # ceiling watchdog can advance this. It should cascade
+                    # silently through B and C straight to PART2_CUECARD_PRESENT.
+                    sequence = _wait_for_phase_count(session_id, 6, timeout_s=5.0)
+                    assert sequence[:6] == EXPECTED_PHASE_SEQUENCE[:6]
+    finally:
+        fake.stop()
+
+
+def test_part1_floor_blocks_early_exit_until_min_elapsed():
+    """Spec 02 §4's "at least 4 minutes" floor: even once the last topic's
+    turn budget is satisfied, Part 1 must not hand off to Part 2 before
+    part1_min_seconds has actually elapsed since PART1_TOPIC_A began."""
+    fake = FakeGeminiLiveServerHandle(FIXTURE).start()
+    try:
+        with _override_settings(
+            gemini_live_ws_url=fake.url,
+            gemini_api_key="fixture-unused-key",
+            intro_turns=1,
+            part1_topic_turns=1,
+            part1_min_seconds=1.0,
+            part1_max_seconds=30,  # far enough out that the ceiling can't interfere
+        ):
+            with TestClient(app) as client:
+                token, session_id = _login_and_create_session(client, "part1-floor@example.com")
+                with client.websocket_connect(f"/ws/exam/{session_id}?token={token}") as ws:
+                    _wait_for_phase_count(session_id, 2, timeout_s=5.0)
+
+                    for expected_len in (3, 4, 5):
+                        _send_ptt_turn(ws)  # INTRO -> A -> B -> C
+                        sequence = _wait_for_phase_count(session_id, expected_len, timeout_s=5.0)
+                        assert sequence[:expected_len] == EXPECTED_PHASE_SEQUENCE[:expected_len]
+
+                    # PART1_TOPIC_C's own turn budget (1) is satisfied
+                    # immediately, but part1_min_seconds hasn't elapsed yet
+                    # — this turn must be absorbed as an extension, not a
+                    # transition.
+                    _send_ptt_turn(ws)
+                    time.sleep(0.4)
+                    sequence = asyncio.run(_fetch_phase_sequence(session_id))
+                    assert sequence[-1] == "PART1_TOPIC_C", (
+                        "Part 1 exited before its 4-minute-equivalent floor elapsed"
+                    )
+
+                    # Once the floor has elapsed, the next turn is free to
+                    # close out Part 1 normally.
+                    time.sleep(0.8)
+                    _send_ptt_turn(ws)
+                    sequence = _wait_for_phase_count(session_id, 6, timeout_s=5.0)
+                    assert sequence[:6] == EXPECTED_PHASE_SEQUENCE[:6]
+    finally:
+        fake.stop()
+
+
+def test_part3_ceiling_watchdog_forces_advance_to_close():
+    """Spec 02 §4's dynamically-computed Part 3 ceiling: if the turn budget
+    never completes naturally, the phase must still hand off to CLOSE once
+    the computed remainder-of-total budget elapses."""
+    fake = FakeGeminiLiveServerHandle(FIXTURE).start()
+    try:
+        with _override_settings(
+            gemini_live_ws_url=fake.url,
+            gemini_api_key="fixture-unused-key",
+            part2_prep_seconds=0.3,
+            part2_long_turn_seconds=3,
+            part2_long_turn_warn_at_seconds=2.9,
+            intro_turns=1,
+            part1_topic_turns=1,
+            part1_min_seconds=0,
+            part2_roundoff_turns=1,
+            part3_discussion_turns=1000,  # never reached by turn budget alone
+            part3_min_seconds=0.5,
+            part3_max_seconds=0.5,  # deterministic short ceiling regardless
+            # of exam_total_max_seconds/elapsed-time interplay
+        ):
+            with TestClient(app) as client:
+                token, session_id = _login_and_create_session(client, "part3-ceiling@example.com")
+                with client.websocket_connect(f"/ws/exam/{session_id}?token={token}") as ws:
+                    _wait_for_phase_count(session_id, 2, timeout_s=5.0)
+
+                    for expected_len in (3, 4, 5, 6):
+                        _send_ptt_turn(ws)
+                        sequence = _wait_for_phase_count(session_id, expected_len, timeout_s=5.0)
+                        assert sequence[:expected_len] == EXPECTED_PHASE_SEQUENCE[:expected_len]
+
+                    ws.send_json({"type": "cue_card_ack"})
+                    _wait_for_phase_count(session_id, 7, timeout_s=5.0)  # PART2_PREP
+                    _wait_for_phase_count(session_id, 8, timeout_s=5.0)  # PART2_LONG_TURN
+
+                    _send_ptt_turn(ws)  # released well inside the long cutoff
+                    sequence = _wait_for_phase_count(session_id, 9, timeout_s=5.0)
+                    assert sequence[:9] == EXPECTED_PHASE_SEQUENCE[:9]
+
+                    _send_ptt_turn(ws)  # clears PART2_ROUNDOFF -> PART3_DISCUSSION
+                    sequence = _wait_for_phase_count(session_id, 10, timeout_s=5.0)
+                    assert sequence[:10] == EXPECTED_PHASE_SEQUENCE[:10]
+
+                    # No further PTT turns: part3_discussion_turns (1000) is
+                    # nowhere close, so only the dynamic ceiling watchdog
+                    # can advance this to CLOSE.
+                    sequence = _wait_for_phase_count(session_id, 11, timeout_s=5.0)
+                    assert sequence[:11] == EXPECTED_PHASE_SEQUENCE[:11]
+    finally:
+        fake.stop()
+
+
+def test_part2_hard_cutoff_unmutes_input_for_subsequent_turns():
+    """Regression test for a mute-leak bug: gemini_bridge.force_mute_input()
+    is invoked at the Part 2 hard cutoff (Spec 02 §3.3/§3.4), but nothing
+    ever called unmute_input() afterward — so a candidate who ran past the
+    120s limit would have every later turn (round-off, Part 3) silently
+    dropped for the rest of the connection. This drives the candidate
+    straight through the hard-cutoff path (holding PTT past the deadline
+    instead of releasing early) and asserts audio sent in a later phase
+    still reaches the fake Gemini server."""
+    fake = FakeGeminiLiveServerHandle(FIXTURE).start()
+    try:
+        with _override_settings(
+            gemini_live_ws_url=fake.url,
+            gemini_api_key="fixture-unused-key",
+            part2_prep_seconds=0.3,
+            part2_long_turn_seconds=0.5,
+            part2_long_turn_warn_at_seconds=0.4,
+            intro_turns=1,
+            part1_topic_turns=1,
+            part1_min_seconds=0,
+            # Two round-off turns so the stale, over-held turn's eventual
+            # activity_end (turn 1) doesn't immediately close out
+            # round-off before we can test a deliberate, fresh turn (turn 2).
+            part2_roundoff_turns=2,
+            part3_discussion_turns=1,
+        ):
+            with TestClient(app) as client:
+                token, session_id = _login_and_create_session(client, "part2-mute@example.com")
+                with client.websocket_connect(f"/ws/exam/{session_id}?token={token}") as ws:
+                    _wait_for_phase_count(session_id, 2, timeout_s=5.0)
+
+                    for expected_len in (3, 4, 5, 6):
+                        _send_ptt_turn(ws)
+                        sequence = _wait_for_phase_count(session_id, expected_len, timeout_s=5.0)
+                        assert sequence[:expected_len] == EXPECTED_PHASE_SEQUENCE[:expected_len]
+
+                    ws.send_json({"type": "cue_card_ack"})
+                    _wait_for_phase_count(session_id, 7, timeout_s=5.0)  # PART2_PREP
+                    _wait_for_phase_count(session_id, 8, timeout_s=5.0)  # PART2_LONG_TURN
+
+                    # Hold PTT straight through the hard cutoff instead of
+                    # releasing — the server must force-mute and advance on
+                    # its own, without waiting for activity_end.
+                    ws.send_json({"type": "activity_start"})
+                    ws.send_bytes(_pcm16_frame())
+                    time.sleep(1.0)  # past the 0.5s deadline + poll interval
+
+                    sequence = _wait_for_phase_count(session_id, 9, timeout_s=5.0)
+                    assert sequence[:9] == EXPECTED_PHASE_SEQUENCE[:9]
+
+                    # Release the stale, over-held PTT — consumes
+                    # round-off's first turn slot.
+                    ws.send_json({"type": "activity_end"})
+                    time.sleep(0.3)
+
+                    before = _count_audio_messages(fake)
+                    _send_ptt_turn(ws)  # a fresh, clean turn
+                    time.sleep(0.3)
+                    after = _count_audio_messages(fake)
+                    assert after > before, (
+                        "candidate audio was dropped after the Part 2 hard cutoff — "
+                        "force_mute_input() was never undone"
+                    )
+
+                    sequence = _wait_for_phase_count(session_id, 10, timeout_s=5.0)
+                    assert sequence[:10] == EXPECTED_PHASE_SEQUENCE[:10]
+    finally:
+        fake.stop()

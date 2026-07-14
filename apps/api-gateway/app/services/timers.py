@@ -27,7 +27,25 @@ from app.services.gemini_bridge import GeminiLiveBridge, load_directive
 
 logger = logging.getLogger("app.timers")
 
-_redis = aioredis.from_url(settings.redis_url, decode_responses=True)
+_redis: aioredis.Redis | None = None
+_redis_loop: asyncio.AbstractEventLoop | None = None
+
+
+def _get_redis() -> aioredis.Redis:
+    """Lazily creates the shared Redis client against whichever event loop
+    is currently running, recreating it if that loop has changed. In
+    production there is exactly one event loop for the life of the
+    gateway process, so this only ever runs once; it exists so a client
+    created under one loop's connection pool is never handed to a
+    different (possibly already-closed) loop — which is exactly what
+    happens when a test suite opens several independent TestClient
+    sessions, each with its own event loop, in the same process."""
+    global _redis, _redis_loop
+    current_loop = asyncio.get_running_loop()
+    if _redis is None or _redis_loop is not current_loop:
+        _redis = aioredis.from_url(settings.redis_url, decode_responses=True)
+        _redis_loop = current_loop
+    return _redis
 
 # Small buffer over the nominal duration so a watchdog that's briefly
 # unavailable (e.g. mid pod-failover, Phase 4) still finds the key when it
@@ -43,19 +61,63 @@ def _deadline_key(session_id: uuid.UUID, name: str) -> str:
 
 async def set_deadline(session_id: uuid.UUID, name: str, duration_s: float) -> float:
     deadline = time.time() + duration_s
-    await _redis.set(
+    await _get_redis().set(
         _deadline_key(session_id, name), deadline, ex=int(duration_s) + _TTL_BUFFER_SECONDS
     )
     return deadline
 
 
 async def get_deadline(session_id: uuid.UUID, name: str) -> float | None:
-    raw = await _redis.get(_deadline_key(session_id, name))
+    raw = await _get_redis().get(_deadline_key(session_id, name))
     return float(raw) if raw is not None else None
 
 
 async def clear_deadline(session_id: uuid.UUID, name: str) -> None:
-    await _redis.delete(_deadline_key(session_id, name))
+    await _get_redis().delete(_deadline_key(session_id, name))
+
+
+async def mark_phase_start(session_id: uuid.UUID, name: str, ttl_seconds: float) -> float:
+    """Persists a wall-clock *start* instant (as opposed to set_deadline's
+    future instant) — Part 1's 4-5 minute floor/ceiling and Part 3's
+    dynamic remainder budget both need "how long has it actually been
+    since X began", which must survive a reconnect the same way Part 2's
+    deadlines do (a fresh per-connection ExamOrchestrator can't just keep
+    this in an instance variable)."""
+    now = time.time()
+    await _get_redis().set(_deadline_key(session_id, name), now, ex=int(ttl_seconds))
+    return now
+
+
+async def get_phase_start(session_id: uuid.UUID, name: str) -> float | None:
+    raw = await _get_redis().get(_deadline_key(session_id, name))
+    return float(raw) if raw is not None else None
+
+
+async def wait_for_phase_group_deadline(
+    session_id: uuid.UUID, name: str, phases: frozenset[ExamPhase]
+) -> bool:
+    """Generalizes wait_for_prep_expiry's pattern beyond a single phase:
+    polls until the named deadline passes or the session leaves the whole
+    `phases` group out from under us (e.g. Part 1's ceiling watchdog must
+    keep watching across A/B/C, not just whichever sub-phase was active
+    when it started). Returns True only if the deadline actually expired
+    while still somewhere in `phases`."""
+    deadline = await get_deadline(session_id, name)
+    if deadline is None:
+        logger.warning(
+            "wait_for_phase_group_deadline: no deadline set for session=%s name=%s",
+            session_id,
+            name,
+        )
+        return False
+
+    while time.time() < deadline:
+        async with AsyncSessionLocal() as db:
+            phase = await fsm_engine.get_current_phase(db, session_id)
+        if phase not in phases:
+            return False
+        await asyncio.sleep(_POLL_INTERVAL_SECONDS)
+    return True
 
 
 async def wait_for_prep_expiry(session_id: uuid.UUID) -> bool:

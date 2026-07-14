@@ -22,3 +22,16 @@ in application code.
   02 §6.3), injected every `settings.reanchor_every_n_turns` turns within a
   long phase so persona drift doesn't accumulate over a 15-20 minute
   session.
+- Added `directives/part1_wrap_up.txt` and `directives/part1_extend.txt` —
+  the graceful-close/continue pair for Part 1's new hard 4-5 minute
+  combined window (Spec 02 §4), mirroring Part 2's warn/hard-stop pattern:
+  `part1_wrap_up` fires from the ceiling watchdog when Part 1 is still
+  running at 5 minutes; `part1_extend` fires when the topic-rotation budget
+  would otherwise end Part 1 before the 4-minute floor.
+- Added `directives/part3_wrap_up.txt` — fires when Part 3's dynamically
+  computed time budget (Spec 02 §4: whatever's left of the 11-14 minute
+  total, clamped to ~4-5 minutes) expires before the turn budget does.
+- Tightened `directives/part2_roundoff.txt` to ask exactly one optional
+  follow-up question (previously "one or two"), matching the product
+  requirement that round-off — especially after the 120s hard cutoff — stay
+  a single brief wrap-up, not a mini follow-up interview.

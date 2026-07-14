@@ -49,6 +49,21 @@ def _candidate_turn_budget_for_phase(phase: ExamPhase) -> tuple[ExamEvent, int] 
     }.get(phase)
 
 
+# Part 1's real-exam "4-5 minutes combined" window (Spec 02 §1/§4) spans all
+# three topic sub-phases, not any single one — the ceiling watchdog below
+# must keep watching across a natural A->B->C rotation, and its forced-skip
+# path (when it fires early, e.g. still in A) needs to know which FSM event
+# closes out whichever sub-phase is currently active.
+PART1_PHASES = frozenset(
+    {ExamPhase.PART1_TOPIC_A, ExamPhase.PART1_TOPIC_B, ExamPhase.PART1_TOPIC_C}
+)
+_PART1_COMPLETION_EVENT: dict[ExamPhase, ExamEvent] = {
+    ExamPhase.PART1_TOPIC_A: ExamEvent.TOPIC_A_COMPLETE,
+    ExamPhase.PART1_TOPIC_B: ExamEvent.TOPIC_B_COMPLETE,
+    ExamPhase.PART1_TOPIC_C: ExamEvent.TOPIC_C_COMPLETE,
+}
+
+
 class ExamOrchestrator:
     def __init__(
         self, *, session_id: uuid.UUID, bridge: GeminiLiveBridge, outbox: asyncio.Queue
@@ -60,6 +75,11 @@ class ExamOrchestrator:
         self._phase = ExamPhase.INIT_DEVICE_CHECK
         self._turns_in_phase = 0
         self._turns_since_reanchor = 0
+        # Wall-clock start of Part 1 (Spec 02 §4's 4-5 minute combined
+        # window), mirrored into Redis (timers.mark_phase_start) so a
+        # reconnect mid-Part-1 can recover it instead of losing it to this
+        # fresh instance variable — see start()'s resume branch.
+        self._part1_start_ts: float | None = None
         self._topic_sets: dict[str, TopicSet] = {}
         self._cue_card: CueCard | None = None
         self._watchdog_task: asyncio.Task | None = None
@@ -87,17 +107,40 @@ class ExamOrchestrator:
         # watchdog back up against its unchanged Redis deadline (no new
         # deadline is set here — that would reset the clock).
         await self._inject_template("reanchor")
-        if self._phase == ExamPhase.PART2_PREP:
+        if self._phase in PART1_PHASES:
+            self._part1_start_ts = await timers.get_phase_start(self.session_id, "part1_start")
+            await self._repush_live_deadline("part1_max")
+            self._watchdog_task = asyncio.create_task(self._run_part1_watchdog())
+        elif self._phase == ExamPhase.PART2_PREP:
+            # A fresh bridge instance defaults to unmuted (Spec 02 §1) — a
+            # resume landing mid-prep must re-apply the mute, not just the
+            # timer, or a reconnect during prep would let audio through.
+            self.bridge.force_mute_input()
             await self._repush_live_deadline("part2_prep")
             self._watchdog_task = asyncio.create_task(self._run_prep_watchdog())
         elif self._phase == ExamPhase.PART2_LONG_TURN:
             await self._repush_live_deadline("part2_long_turn")
             self._watchdog_task = asyncio.create_task(self._run_long_turn_watchdog())
+        elif self._phase == ExamPhase.PART3_DISCUSSION:
+            await self._repush_live_deadline("part3_discussion")
+            self._watchdog_task = asyncio.create_task(self._run_part3_watchdog())
 
     async def close(self) -> None:
-        for task in (self._watchdog_task, self._finalizing_watchdog_task):
-            if task is not None and not task.done():
-                task.cancel()
+        # Cancel and await (mirrors ws_exam.py's own shutdown sequence) —
+        # cancelling without awaiting can leave a task's `async with
+        # AsyncSessionLocal()` block torn down by the garbage collector
+        # instead of its own clean __aexit__, which is exactly the kind of
+        # dangling-connection warning that shows up under back-to-back
+        # rapid phase transitions (Part 1/3's watchdogs included).
+        tasks = [
+            task
+            for task in (self._watchdog_task, self._finalizing_watchdog_task)
+            if task is not None and not task.done()
+        ]
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _bootstrap_fresh_session(self) -> None:
         # No device-check/ID-capture UI exists yet (Spec 04 §2 Phase 3
@@ -130,7 +173,22 @@ class ExamOrchestrator:
         self._turns_in_phase += 1
         self._turns_since_reanchor += 1
 
-        if self._turns_in_phase < budget:
+        budget_reached = self._turns_in_phase >= budget
+        # Spec 02 §4's "at least 4 minutes" floor for Part 1 is enforced
+        # only at Part 1's single exit point (leaving PART1_TOPIC_C) —
+        # gating just this transition already bounds the *total* Part 1
+        # duration, so A->B and B->C don't need their own floor checks.
+        if (
+            budget_reached
+            and self._phase == ExamPhase.PART1_TOPIC_C
+            and self._part1_start_ts is not None
+            and time.time() - self._part1_start_ts < settings.part1_min_seconds
+        ):
+            await self._inject_template("part1_extend")
+            self._turns_since_reanchor = 0
+            return
+
+        if not budget_reached:
             if self._turns_since_reanchor >= settings.reanchor_every_n_turns:
                 await self._inject_template("reanchor")
                 self._turns_since_reanchor = 0
@@ -181,6 +239,43 @@ class ExamOrchestrator:
 
     # -- watchdogs ----------------------------------------------------------
 
+    async def _run_part1_watchdog(self) -> None:
+        """Spec 02 §4's hard ceiling on Part 1's combined A/B/C window: if
+        still anywhere in Part 1 at part1_max_seconds, wrap up gracefully
+        and force-advance straight to Part 2 regardless of which topic
+        sub-phase is currently active or how many turns it's had."""
+        expired = await timers.wait_for_phase_group_deadline(
+            self.session_id, "part1_max", PART1_PHASES
+        )
+        if not expired:
+            return
+        await timers.clear_deadline(self.session_id, "part1_max")
+        await self.bridge.inject_directive(
+            load_directive(settings.prompt_templates_dir, "part1_wrap_up")
+        )
+        while self._phase in _PART1_COMPLETION_EVENT:
+            event = _PART1_COMPLETION_EVENT[self._phase]
+            is_final_hop = self._phase == ExamPhase.PART1_TOPIC_C
+            await self._advance(event, reason="part1_max_watchdog", announce=is_final_hop)
+
+    async def _run_part3_watchdog(self) -> None:
+        """Spec 02 §4's dynamic ceiling on Part 3: the duration was computed
+        once at PART3_DISCUSSION entry (whatever's left of the 11-14 minute
+        total, clamped to Part 3's own ~4-5 minute band). If the turn
+        budget finishes first, this watchdog just observes the phase
+        change and exits cleanly (mirrors Part 2's prep/long-turn
+        watchdogs); otherwise it force-advances to CLOSE."""
+        expired = await timers.wait_for_phase_group_deadline(
+            self.session_id, "part3_discussion", frozenset({ExamPhase.PART3_DISCUSSION})
+        )
+        if not expired:
+            return
+        await timers.clear_deadline(self.session_id, "part3_discussion")
+        await self.bridge.inject_directive(
+            load_directive(settings.prompt_templates_dir, "part3_wrap_up")
+        )
+        await self._advance(ExamEvent.DISCUSSION_COMPLETE, reason="part3_dynamic_timer_expired")
+
     async def _run_prep_watchdog(self) -> None:
         expired = await timers.wait_for_prep_expiry(self.session_id)
         if not expired:
@@ -216,7 +311,20 @@ class ExamOrchestrator:
 
     # -- core transition + on-enter dispatch ---------------------------------
 
-    async def _advance(self, event: ExamEvent, *, reason: str, extra: dict | None = None) -> None:
+    async def _advance(
+        self,
+        event: ExamEvent,
+        *,
+        reason: str,
+        extra: dict | None = None,
+        announce: bool = True,
+    ) -> None:
+        """`announce=False` logs the transition (still the durable,
+        event-sourced source of truth, CLAUDE.md rule 5) without running its
+        on-enter side effects — used only by the Part 1 ceiling watchdog to
+        cascade silently through any topic sub-phases it's skipping past,
+        so a candidate who overran topic A doesn't get freshly introduced
+        to topic B's questions half a second before being cut off again."""
         async with AsyncSessionLocal() as db:
             next_phase = await fsm_engine.transition(
                 db, self.session_id, event, reason=reason, extra=extra
@@ -224,7 +332,8 @@ class ExamOrchestrator:
         self._phase = next_phase
         self._turns_in_phase = 0
         self._turns_since_reanchor = 0
-        await self._on_enter_phase(next_phase)
+        if announce:
+            await self._on_enter_phase(next_phase)
 
     async def _on_enter_phase(self, phase: ExamPhase) -> None:
         if phase == ExamPhase.INTRO:
@@ -235,9 +344,27 @@ class ExamOrchestrator:
                 session.topic_set_ids = exam_content.topic_set_ids_payload(self._topic_sets)
                 candidate_name = candidate.full_name
                 await db.commit()
+            # Marks the start of the scored exam content (Spec 02 §4's
+            # 11-14 minute overall Speaking-section threshold) — Part 3's
+            # dynamic remainder budget reads this back.
+            await timers.mark_phase_start(
+                self.session_id, "exam_start", ttl_seconds=settings.exam_total_max_seconds + 600
+            )
             await self._inject_template("intro", candidate_name=candidate_name)
 
         elif phase in (ExamPhase.PART1_TOPIC_A, ExamPhase.PART1_TOPIC_B, ExamPhase.PART1_TOPIC_C):
+            if phase == ExamPhase.PART1_TOPIC_A:
+                # Part 1's single entry point (Spec 02 §4) — starts the
+                # 4-5 minute combined floor/ceiling window spanning A/B/C.
+                self._part1_start_ts = await timers.mark_phase_start(
+                    self.session_id, "part1_start", ttl_seconds=settings.part1_max_seconds + 300
+                )
+                deadline = await timers.set_deadline(
+                    self.session_id, "part1_max", settings.part1_max_seconds
+                )
+                await self._push_timer_deadline("part1_max", deadline)
+                self._watchdog_task = asyncio.create_task(self._run_part1_watchdog())
+
             slot = phase.value[-1]  # "PART1_TOPIC_A" -> "A"
             topic_set = self._topic_sets[slot]
             await self._inject_template(
@@ -266,6 +393,11 @@ class ExamOrchestrator:
             )
 
         elif phase == ExamPhase.PART2_PREP:
+            # Spec 02 §1: prep is silent — mute the candidate's mic stream
+            # server-side (not merely trusting the thin client's PTT UI,
+            # CLAUDE.md rule 1) so nothing recorded during prep can reach
+            # Gemini or be scored.
+            self.bridge.force_mute_input()
             deadline = await timers.set_deadline(
                 self.session_id, "part2_prep", settings.part2_prep_seconds
             )
@@ -276,6 +408,8 @@ class ExamOrchestrator:
             self._watchdog_task = asyncio.create_task(self._run_prep_watchdog())
 
         elif phase == ExamPhase.PART2_LONG_TURN:
+            # Undo PART2_PREP's mute — the candidate is now expected to speak.
+            self.bridge.unmute_input()
             deadline = await timers.set_deadline(
                 self.session_id, "part2_long_turn", settings.part2_long_turn_seconds
             )
@@ -283,11 +417,34 @@ class ExamOrchestrator:
             self._watchdog_task = asyncio.create_task(self._run_long_turn_watchdog())
 
         elif phase == ExamPhase.PART2_ROUNDOFF:
+            # Undo the hard-cutoff's force_mute_input (Spec 02 §3.3/§3.4) —
+            # without this, a candidate who ran past 120s would have every
+            # later turn (round-off, Part 3) silently dropped for the rest
+            # of the connection.
+            self.bridge.unmute_input()
             await self._inject_template("part2_roundoff")
 
         elif phase == ExamPhase.PART3_DISCUSSION:
             themes = self._cue_card.linked_part3_themes if self._cue_card else []
             await self._inject_template("part3_discussion", themes="; ".join(themes))
+
+            # Spec 02 §4: Part 3's timing dynamically fills whatever is left
+            # of the overall 11-14 minute exam threshold, clamped to Part
+            # 3's own ~4-5 minute band so a very fast or very slow Part 1/2
+            # still leaves Part 3 a sane, bounded ceiling rather than
+            # racing to zero or running unbounded.
+            exam_start = await timers.get_phase_start(self.session_id, "exam_start")
+            elapsed_before_part3 = time.time() - exam_start if exam_start is not None else 0.0
+            remaining_of_total = settings.exam_total_max_seconds - elapsed_before_part3
+            target_duration = min(
+                max(remaining_of_total, settings.part3_min_seconds),
+                settings.part3_max_seconds,
+            )
+            deadline = await timers.set_deadline(
+                self.session_id, "part3_discussion", target_duration
+            )
+            await self._push_timer_deadline("part3_discussion", deadline)
+            self._watchdog_task = asyncio.create_task(self._run_part3_watchdog())
 
         elif phase == ExamPhase.CLOSE:
             await self._inject_template("close")

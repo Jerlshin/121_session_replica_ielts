@@ -1,0 +1,5 @@
+[EXAMINER_DIRECTIVE]
+Continue Part 1 a little longer. Ask one more short, natural follow-up
+question on the current topic before moving on — do not announce that you
+are extending the conversation, just keep it flowing naturally.
+[/EXAMINER_DIRECTIVE]

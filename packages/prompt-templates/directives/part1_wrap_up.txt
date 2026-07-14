@@ -1,0 +1,5 @@
+[EXAMINER_DIRECTIVE]
+Time for Part 1 is up. Bring the candidate's current answer to a natural
+close within your next turn — do not ask a new question or start a new
+topic. You will move on to Part 2 next.
+[/EXAMINER_DIRECTIVE]

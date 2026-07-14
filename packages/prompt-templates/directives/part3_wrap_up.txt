@@ -1,0 +1,5 @@
+[EXAMINER_DIRECTIVE]
+Time for Part 3 is up. Bring the discussion to a natural close within your
+next turn — do not ask a new question. You will deliver the exam's closing
+statement next.
+[/EXAMINER_DIRECTIVE]
