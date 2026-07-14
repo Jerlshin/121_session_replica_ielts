@@ -80,8 +80,13 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: "true" # dev-only convenience, never set in a real deploy
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
     volumes:
+      # Single mount for the whole provisioning tree (datasources +
+      # dashboards/dashboards.yml + dashboards/json/*.json) — a second,
+      # nested bind mount targeting a path inside this one (as it was
+      # previously split) makes runc create a mountpoint inside an
+      # already-mounted read-only filesystem, which fails at container
+      # start with "OCI runtime create failed ... read-only file system".
       - ../grafana/provisioning:/etc/grafana/provisioning:ro
-      - ../grafana/dashboards:/etc/grafana/provisioning/dashboards/json:ro
       - grafana-data:/var/lib/grafana
     ports:
       - "3001:3000" # 3000 is already apps/web's dev port

@@ -17,11 +17,12 @@ infra/
 ├── prometheus/
 │   └── prometheus.yml              Scrape config for the api-gateway's /metrics
 └── grafana/
-    ├── dashboards/
-    │   └── latency-budget.json     Pre-built Spec 01 §4.4 latency dashboard
     └── provisioning/
         ├── datasources/prometheus.yml
-        └── dashboards/dashboards.yml
+        └── dashboards/
+            ├── dashboards.yml
+            └── json/
+                └── latency-budget.json     Pre-built Spec 01 §4.4 latency dashboard
 ```
 
 ### `docker/docker-compose.dev.yml` — the shared dev stack
@@ -82,12 +83,18 @@ limits (hops 4+5 are combined, not separable server-side).
   `prometheus` compose service as Grafana's default datasource on first
   boot; zero manual UI setup required.
 - **`provisioning/dashboards/dashboards.yml`** — points Grafana's
-  dashboard provider at `dashboards/` (mounted into the container at
-  `/etc/grafana/provisioning/dashboards/json`).
-- **`dashboards/latency-budget.json`** — one pre-built dashboard,
-  `"IELTS Platform — Latency Budget (Spec 01 §4.4)"`, with a P50/P95 panel
-  per histogram above (including annotated reference lines at the Spec 01
-  §4.4 target budget: ~380ms P50, ~980ms P95 for the total
+  dashboard provider at `provisioning/dashboards/json/`, which the
+  container sees at `/etc/grafana/provisioning/dashboards/json` — a
+  subdirectory of the single `../grafana/provisioning:/etc/grafana/provisioning:ro`
+  bind mount in `docker-compose.dev.yml`, not a second, separately-mounted
+  volume (an earlier layout split this into two nested bind mounts, which
+  fails at container start: runc has to create the inner mountpoint
+  inside an already-mounted read-only filesystem — "OCI runtime create
+  failed ... read-only file system").
+- **`provisioning/dashboards/json/latency-budget.json`** — one pre-built
+  dashboard, `"IELTS Platform — Latency Budget (Spec 01 §4.4)"`, with a
+  P50/P95 panel per histogram above (including annotated reference lines
+  at the Spec 01 §4.4 target budget: ~380ms P50, ~980ms P95 for the total
   server-observable leg).
 
 Once the stack is up, `http://localhost:3001` shows this dashboard
