@@ -1,0 +1,509 @@
+{
+  "_comment": "Synthetic benchmark corpus for Spec 04 §2 Phase 9 calibration. Hand-authored, not real candidate data -- feature vectors and transcript text are illustrative stand-ins (same posture as tests/fixtures/reference_audio/), not derived from real Phase 6 extraction. human_scores are the certified gold rating a benchmark case is scored against; simulated_pass_1/simulated_pass_2 are scripted judge outputs consumed by CorpusScriptedScoringLLM for dry-run shadow-scoring.",
+  "cases": [
+    {
+      "case_id": "bc_001",
+      "profile_label": "strong_lexical_resource",
+      "candidate_display_name": "Simulated Candidate 1",
+      "phases": [
+        {
+          "phase": "part1",
+          "transcript_text": "I'd say my hometown is fairly idiosyncratic, renowned for its eclectic architecture.",
+          "fluency_features": {"speech_rate_wpm": 145, "filled_pause_rate_per_100w": 2.1},
+          "lexical_features": {"mtld": 92.4, "top_5000_rarity_ratio": 0.28},
+          "grammar_features": {"mean_length_t_unit": 11.2, "error_free_clause_ratio": 0.86},
+          "pronunciation_features": {"pitch_range_semitones": 6.1}
+        },
+        {
+          "phase": "part2",
+          "transcript_text": "The book that left an indelible impression on me was a sprawling, multigenerational saga.",
+          "fluency_features": {"speech_rate_wpm": 140, "filled_pause_rate_per_100w": 2.4},
+          "lexical_features": {"mtld": 95.0, "top_5000_rarity_ratio": 0.31},
+          "grammar_features": {"mean_length_t_unit": 12.0, "error_free_clause_ratio": 0.84},
+          "pronunciation_features": {"pitch_range_semitones": 6.4}
+        },
+        {
+          "phase": "part3",
+          "transcript_text": "Arguably, the proliferation of digital media has fundamentally reshaped reading habits.",
+          "fluency_features": {"speech_rate_wpm": 138, "filled_pause_rate_per_100w": 2.6},
+          "lexical_features": {"mtld": 90.1, "top_5000_rarity_ratio": 0.29},
+          "grammar_features": {"mean_length_t_unit": 13.1, "error_free_clause_ratio": 0.82},
+          "pronunciation_features": {"pitch_range_semitones": 5.9}
+        }
+      ],
+      "session_aggregate": {
+        "fluency_coherence": {"speech_rate_wpm": 141, "filled_pause_rate_per_100w": 2.4},
+        "lexical_resource": {"mtld": 92.5, "top_5000_rarity_ratio": 0.29},
+        "grammatical_range_accuracy": {"mean_length_t_unit": 12.1, "error_free_clause_ratio": 0.84},
+        "pronunciation": {"pitch_range_semitones": 6.1}
+      },
+      "feature_status": {
+        "fluency_coherence": "ok",
+        "lexical_resource": "ok",
+        "grammatical_range_accuracy": "ok",
+        "pronunciation": "ok"
+      },
+      "human_scores": {
+        "fluency_coherence": 7.0,
+        "lexical_resource": 8.0,
+        "grammatical_range_accuracy": 7.0,
+        "pronunciation": 7.0
+      },
+      "simulated_pass_1": {
+        "fluency_coherence": 7.0,
+        "lexical_resource": 8.0,
+        "grammatical_range_accuracy": 7.0,
+        "pronunciation": 7.0
+      },
+      "simulated_pass_2": {
+        "fluency_coherence": 7.0,
+        "lexical_resource": 7.5,
+        "grammatical_range_accuracy": 7.0,
+        "pronunciation": 7.0
+      },
+      "asr_word_confidence": 0.93,
+      "pronunciation_confidence": 0.88
+    },
+    {
+      "case_id": "bc_002",
+      "profile_label": "heavy_grammatical_errors",
+      "candidate_display_name": "Simulated Candidate 2",
+      "phases": [
+        {
+          "phase": "part1",
+          "transcript_text": "I living in city center since three year, my job is very difficult sometimes.",
+          "fluency_features": {"speech_rate_wpm": 110, "filled_pause_rate_per_100w": 5.0},
+          "lexical_features": {"mtld": 55.2, "top_5000_rarity_ratio": 0.08},
+          "grammar_features": {"mean_length_t_unit": 6.5, "error_free_clause_ratio": 0.32},
+          "pronunciation_features": {"pitch_range_semitones": 3.8}
+        },
+        {
+          "phase": "part2",
+          "transcript_text": "This is skill I learn when I am young, my father he teach me but I forget many thing.",
+          "fluency_features": {"speech_rate_wpm": 105, "filled_pause_rate_per_100w": 5.6},
+          "lexical_features": {"mtld": 52.0, "top_5000_rarity_ratio": 0.07},
+          "grammar_features": {"mean_length_t_unit": 6.1, "error_free_clause_ratio": 0.29},
+          "pronunciation_features": {"pitch_range_semitones": 3.6}
+        },
+        {
+          "phase": "part3",
+          "transcript_text": "I think technology is good but also is make people lazy sometimes I believe so.",
+          "fluency_features": {"speech_rate_wpm": 108, "filled_pause_rate_per_100w": 5.2},
+          "lexical_features": {"mtld": 53.5, "top_5000_rarity_ratio": 0.09},
+          "grammar_features": {"mean_length_t_unit": 6.4, "error_free_clause_ratio": 0.31},
+          "pronunciation_features": {"pitch_range_semitones": 3.9}
+        }
+      ],
+      "session_aggregate": {
+        "fluency_coherence": {"speech_rate_wpm": 108, "filled_pause_rate_per_100w": 5.3},
+        "lexical_resource": {"mtld": 53.6, "top_5000_rarity_ratio": 0.08},
+        "grammatical_range_accuracy": {"mean_length_t_unit": 6.3, "error_free_clause_ratio": 0.31},
+        "pronunciation": {"pitch_range_semitones": 3.8}
+      },
+      "feature_status": {
+        "fluency_coherence": "ok",
+        "lexical_resource": "ok",
+        "grammatical_range_accuracy": "ok",
+        "pronunciation": "ok"
+      },
+      "human_scores": {
+        "fluency_coherence": 5.0,
+        "lexical_resource": 5.0,
+        "grammatical_range_accuracy": 4.0,
+        "pronunciation": 5.5
+      },
+      "simulated_pass_1": {
+        "fluency_coherence": 5.0,
+        "lexical_resource": 5.0,
+        "grammatical_range_accuracy": 4.5,
+        "pronunciation": 5.5
+      },
+      "simulated_pass_2": {
+        "fluency_coherence": 5.0,
+        "lexical_resource": 5.0,
+        "grammatical_range_accuracy": 4.0,
+        "pronunciation": 5.5
+      },
+      "asr_word_confidence": 0.81,
+      "pronunciation_confidence": 0.79
+    },
+    {
+      "case_id": "bc_003",
+      "profile_label": "hesitant_low_fluency",
+      "candidate_display_name": "Simulated Candidate 3",
+      "phases": [
+        {
+          "phase": "part1",
+          "transcript_text": "Um, well, I, uh, I think, um, my hometown is, uh, quite nice I suppose.",
+          "fluency_features": {"speech_rate_wpm": 85, "filled_pause_rate_per_100w": 12.5},
+          "lexical_features": {"mtld": 60.0, "top_5000_rarity_ratio": 0.10},
+          "grammar_features": {"mean_length_t_unit": 8.0, "error_free_clause_ratio": 0.60},
+          "pronunciation_features": {"pitch_range_semitones": 4.2}
+        },
+        {
+          "phase": "part2",
+          "transcript_text": "So, um, the skill, uh, it was, um, learning to, uh, cook I think, sorry, yes cook.",
+          "fluency_features": {"speech_rate_wpm": 80, "filled_pause_rate_per_100w": 13.8},
+          "lexical_features": {"mtld": 58.5, "top_5000_rarity_ratio": 0.09},
+          "grammar_features": {"mean_length_t_unit": 7.5, "error_free_clause_ratio": 0.58},
+          "pronunciation_features": {"pitch_range_semitones": 4.0}
+        },
+        {
+          "phase": "part3",
+          "transcript_text": "Um, I, uh, don't really know, um, maybe technology, uh, changes things a lot I guess.",
+          "fluency_features": {"speech_rate_wpm": 82, "filled_pause_rate_per_100w": 13.0},
+          "lexical_features": {"mtld": 59.0, "top_5000_rarity_ratio": 0.10},
+          "grammar_features": {"mean_length_t_unit": 7.8, "error_free_clause_ratio": 0.59},
+          "pronunciation_features": {"pitch_range_semitones": 4.1}
+        }
+      ],
+      "session_aggregate": {
+        "fluency_coherence": {"speech_rate_wpm": 82, "filled_pause_rate_per_100w": 13.1},
+        "lexical_resource": {"mtld": 59.2, "top_5000_rarity_ratio": 0.10},
+        "grammatical_range_accuracy": {"mean_length_t_unit": 7.8, "error_free_clause_ratio": 0.59},
+        "pronunciation": {"pitch_range_semitones": 4.1}
+      },
+      "feature_status": {
+        "fluency_coherence": "ok",
+        "lexical_resource": "ok",
+        "grammatical_range_accuracy": "ok",
+        "pronunciation": "ok"
+      },
+      "human_scores": {
+        "fluency_coherence": 4.0,
+        "lexical_resource": 5.5,
+        "grammatical_range_accuracy": 5.5,
+        "pronunciation": 5.0
+      },
+      "simulated_pass_1": {
+        "fluency_coherence": 4.0,
+        "lexical_resource": 5.5,
+        "grammatical_range_accuracy": 5.5,
+        "pronunciation": 5.0
+      },
+      "simulated_pass_2": {
+        "fluency_coherence": 4.5,
+        "lexical_resource": 5.5,
+        "grammatical_range_accuracy": 5.5,
+        "pronunciation": 5.0
+      },
+      "asr_word_confidence": 0.88,
+      "pronunciation_confidence": 0.84
+    },
+    {
+      "case_id": "bc_004",
+      "profile_label": "clear_pronunciation",
+      "candidate_display_name": "Simulated Candidate 4",
+      "phases": [
+        {
+          "phase": "part1",
+          "transcript_text": "My hometown is a mid-sized coastal city with a fairly relaxed pace of life.",
+          "fluency_features": {"speech_rate_wpm": 150, "filled_pause_rate_per_100w": 3.0},
+          "lexical_features": {"mtld": 75.0, "top_5000_rarity_ratio": 0.18},
+          "grammar_features": {"mean_length_t_unit": 9.5, "error_free_clause_ratio": 0.75},
+          "pronunciation_features": {"pitch_range_semitones": 8.2, "stress_timing_regularity": 0.91}
+        },
+        {
+          "phase": "part2",
+          "transcript_text": "The skill I chose to describe is playing the violin, which I started at age nine.",
+          "fluency_features": {"speech_rate_wpm": 148, "filled_pause_rate_per_100w": 3.2},
+          "lexical_features": {"mtld": 73.5, "top_5000_rarity_ratio": 0.17},
+          "grammar_features": {"mean_length_t_unit": 9.8, "error_free_clause_ratio": 0.77},
+          "pronunciation_features": {"pitch_range_semitones": 8.5, "stress_timing_regularity": 0.93}
+        },
+        {
+          "phase": "part3",
+          "transcript_text": "Learning music from a young age arguably strengthens discipline and focus later in life.",
+          "fluency_features": {"speech_rate_wpm": 146, "filled_pause_rate_per_100w": 3.1},
+          "lexical_features": {"mtld": 74.0, "top_5000_rarity_ratio": 0.19},
+          "grammar_features": {"mean_length_t_unit": 10.1, "error_free_clause_ratio": 0.76},
+          "pronunciation_features": {"pitch_range_semitones": 8.0, "stress_timing_regularity": 0.90}
+        }
+      ],
+      "session_aggregate": {
+        "fluency_coherence": {"speech_rate_wpm": 148, "filled_pause_rate_per_100w": 3.1},
+        "lexical_resource": {"mtld": 74.2, "top_5000_rarity_ratio": 0.18},
+        "grammatical_range_accuracy": {"mean_length_t_unit": 9.8, "error_free_clause_ratio": 0.76},
+        "pronunciation": {"pitch_range_semitones": 8.2, "stress_timing_regularity": 0.91}
+      },
+      "feature_status": {
+        "fluency_coherence": "ok",
+        "lexical_resource": "ok",
+        "grammatical_range_accuracy": "ok",
+        "pronunciation": "ok"
+      },
+      "human_scores": {
+        "fluency_coherence": 7.0,
+        "lexical_resource": 6.5,
+        "grammatical_range_accuracy": 7.0,
+        "pronunciation": 8.5
+      },
+      "simulated_pass_1": {
+        "fluency_coherence": 7.0,
+        "lexical_resource": 6.5,
+        "grammatical_range_accuracy": 7.0,
+        "pronunciation": 8.5
+      },
+      "simulated_pass_2": {
+        "fluency_coherence": 7.0,
+        "lexical_resource": 6.5,
+        "grammatical_range_accuracy": 7.5,
+        "pronunciation": 8.5
+      },
+      "asr_word_confidence": 0.95,
+      "pronunciation_confidence": 0.92
+    },
+    {
+      "case_id": "bc_005",
+      "profile_label": "balanced_mid_band",
+      "candidate_display_name": "Simulated Candidate 5",
+      "phases": [
+        {
+          "phase": "part1",
+          "transcript_text": "I currently work as a shop assistant, and I quite enjoy talking to customers.",
+          "fluency_features": {"speech_rate_wpm": 125, "filled_pause_rate_per_100w": 6.0},
+          "lexical_features": {"mtld": 68.0, "top_5000_rarity_ratio": 0.14},
+          "grammar_features": {"mean_length_t_unit": 8.5, "error_free_clause_ratio": 0.65},
+          "pronunciation_features": {"pitch_range_semitones": 5.5}
+        },
+        {
+          "phase": "part2",
+          "transcript_text": "I want to talk about a time I learned to swim, which was difficult at first for me.",
+          "fluency_features": {"speech_rate_wpm": 122, "filled_pause_rate_per_100w": 6.4},
+          "lexical_features": {"mtld": 66.5, "top_5000_rarity_ratio": 0.13},
+          "grammar_features": {"mean_length_t_unit": 8.2, "error_free_clause_ratio": 0.63},
+          "pronunciation_features": {"pitch_range_semitones": 5.3}
+        },
+        {
+          "phase": "part3",
+          "transcript_text": "I suppose sports help people build confidence, especially when they are young.",
+          "fluency_features": {"speech_rate_wpm": 124, "filled_pause_rate_per_100w": 6.1},
+          "lexical_features": {"mtld": 67.0, "top_5000_rarity_ratio": 0.14},
+          "grammar_features": {"mean_length_t_unit": 8.4, "error_free_clause_ratio": 0.64},
+          "pronunciation_features": {"pitch_range_semitones": 5.4}
+        }
+      ],
+      "session_aggregate": {
+        "fluency_coherence": {"speech_rate_wpm": 124, "filled_pause_rate_per_100w": 6.2},
+        "lexical_resource": {"mtld": 67.2, "top_5000_rarity_ratio": 0.14},
+        "grammatical_range_accuracy": {"mean_length_t_unit": 8.4, "error_free_clause_ratio": 0.64},
+        "pronunciation": {"pitch_range_semitones": 5.4}
+      },
+      "feature_status": {
+        "fluency_coherence": "ok",
+        "lexical_resource": "ok",
+        "grammatical_range_accuracy": "ok",
+        "pronunciation": "ok"
+      },
+      "human_scores": {
+        "fluency_coherence": 6.0,
+        "lexical_resource": 6.0,
+        "grammatical_range_accuracy": 6.0,
+        "pronunciation": 6.5
+      },
+      "simulated_pass_1": {
+        "fluency_coherence": 6.0,
+        "lexical_resource": 6.0,
+        "grammatical_range_accuracy": 6.0,
+        "pronunciation": 6.5
+      },
+      "simulated_pass_2": {
+        "fluency_coherence": 6.0,
+        "lexical_resource": 6.0,
+        "grammatical_range_accuracy": 6.5,
+        "pronunciation": 6.5
+      },
+      "asr_word_confidence": 0.90,
+      "pronunciation_confidence": 0.86
+    },
+    {
+      "case_id": "bc_006",
+      "profile_label": "ambiguous_pronunciation_evidence",
+      "candidate_display_name": "Simulated Candidate 6",
+      "phases": [
+        {
+          "phase": "part1",
+          "transcript_text": "I live in a small town, it is quiet, I like it because is peaceful most of time.",
+          "fluency_features": {"speech_rate_wpm": 118, "filled_pause_rate_per_100w": 7.0},
+          "lexical_features": {"mtld": 64.0, "top_5000_rarity_ratio": 0.12},
+          "grammar_features": {"mean_length_t_unit": 7.9, "error_free_clause_ratio": 0.60},
+          "pronunciation_features": {"pitch_range_semitones": 4.9, "snr_db": 12.0}
+        },
+        {
+          "phase": "part2",
+          "transcript_text": "This skill, learning to drive, took me a long time and much practice with my uncle.",
+          "fluency_features": {"speech_rate_wpm": 116, "filled_pause_rate_per_100w": 7.4},
+          "lexical_features": {"mtld": 63.0, "top_5000_rarity_ratio": 0.11},
+          "grammar_features": {"mean_length_t_unit": 7.6, "error_free_clause_ratio": 0.58},
+          "pronunciation_features": {"pitch_range_semitones": 4.7, "snr_db": 9.5}
+        },
+        {
+          "phase": "part3",
+          "transcript_text": "I think driving gives people freedom, but also brings responsibility with it too.",
+          "fluency_features": {"speech_rate_wpm": 119, "filled_pause_rate_per_100w": 6.8},
+          "lexical_features": {"mtld": 64.5, "top_5000_rarity_ratio": 0.12},
+          "grammar_features": {"mean_length_t_unit": 7.9, "error_free_clause_ratio": 0.61},
+          "pronunciation_features": {"pitch_range_semitones": 5.0, "snr_db": 10.5}
+        }
+      ],
+      "session_aggregate": {
+        "fluency_coherence": {"speech_rate_wpm": 118, "filled_pause_rate_per_100w": 7.1},
+        "lexical_resource": {"mtld": 63.8, "top_5000_rarity_ratio": 0.12},
+        "grammatical_range_accuracy": {"mean_length_t_unit": 7.8, "error_free_clause_ratio": 0.60},
+        "pronunciation": {"pitch_range_semitones": 4.9, "snr_db": 10.7}
+      },
+      "feature_status": {
+        "fluency_coherence": "ok",
+        "lexical_resource": "ok",
+        "grammatical_range_accuracy": "ok",
+        "pronunciation": "low_confidence"
+      },
+      "human_scores": {
+        "fluency_coherence": 5.5,
+        "lexical_resource": 5.5,
+        "grammatical_range_accuracy": 5.0,
+        "pronunciation": 6.5
+      },
+      "simulated_pass_1": {
+        "fluency_coherence": 5.5,
+        "lexical_resource": 5.5,
+        "grammatical_range_accuracy": 5.0,
+        "pronunciation": 6.0
+      },
+      "simulated_pass_2": {
+        "fluency_coherence": 5.5,
+        "lexical_resource": 5.5,
+        "grammatical_range_accuracy": 5.0,
+        "pronunciation": 8.0
+      },
+      "asr_word_confidence": 0.86,
+      "pronunciation_confidence": 0.55
+    },
+    {
+      "case_id": "bc_007",
+      "profile_label": "low_asr_confidence_noisy_audio",
+      "candidate_display_name": "Simulated Candidate 7",
+      "phases": [
+        {
+          "phase": "part1",
+          "transcript_text": "[partially inaudible] ... my job ... [inaudible] ... every day I take the bus.",
+          "fluency_features": {"speech_rate_wpm": 130, "filled_pause_rate_per_100w": 5.5},
+          "lexical_features": {"mtld": 70.0, "top_5000_rarity_ratio": 0.15},
+          "grammar_features": {"mean_length_t_unit": 8.8, "error_free_clause_ratio": 0.68},
+          "pronunciation_features": {"pitch_range_semitones": 5.6}
+        },
+        {
+          "phase": "part2",
+          "transcript_text": "The skill was [inaudible] ... photography, I bought a camera two years ago.",
+          "fluency_features": {"speech_rate_wpm": 128, "filled_pause_rate_per_100w": 5.8},
+          "lexical_features": {"mtld": 69.0, "top_5000_rarity_ratio": 0.14},
+          "grammar_features": {"mean_length_t_unit": 8.6, "error_free_clause_ratio": 0.67},
+          "pronunciation_features": {"pitch_range_semitones": 5.4}
+        },
+        {
+          "phase": "part3",
+          "transcript_text": "I believe hobbies [inaudible] ... help people relax after a long work week.",
+          "fluency_features": {"speech_rate_wpm": 131, "filled_pause_rate_per_100w": 5.6},
+          "lexical_features": {"mtld": 70.5, "top_5000_rarity_ratio": 0.15},
+          "grammar_features": {"mean_length_t_unit": 8.9, "error_free_clause_ratio": 0.69},
+          "pronunciation_features": {"pitch_range_semitones": 5.7}
+        }
+      ],
+      "session_aggregate": {
+        "fluency_coherence": {"speech_rate_wpm": 130, "filled_pause_rate_per_100w": 5.6},
+        "lexical_resource": {"mtld": 69.8, "top_5000_rarity_ratio": 0.15},
+        "grammatical_range_accuracy": {"mean_length_t_unit": 8.8, "error_free_clause_ratio": 0.68},
+        "pronunciation": {"pitch_range_semitones": 5.6}
+      },
+      "feature_status": {
+        "fluency_coherence": "low_confidence",
+        "lexical_resource": "low_confidence",
+        "grammatical_range_accuracy": "low_confidence",
+        "pronunciation": "ok"
+      },
+      "human_scores": {
+        "fluency_coherence": 6.0,
+        "lexical_resource": 6.5,
+        "grammatical_range_accuracy": 6.0,
+        "pronunciation": 6.0
+      },
+      "simulated_pass_1": {
+        "fluency_coherence": 6.0,
+        "lexical_resource": 6.5,
+        "grammatical_range_accuracy": 6.0,
+        "pronunciation": 6.0
+      },
+      "simulated_pass_2": {
+        "fluency_coherence": 6.0,
+        "lexical_resource": 6.0,
+        "grammatical_range_accuracy": 6.0,
+        "pronunciation": 6.0
+      },
+      "asr_word_confidence": 0.58,
+      "pronunciation_confidence": 0.81
+    },
+    {
+      "case_id": "bc_008",
+      "profile_label": "strong_overall_c1",
+      "candidate_display_name": "Simulated Candidate 8",
+      "phases": [
+        {
+          "phase": "part1",
+          "transcript_text": "I'd venture to say my upbringing was somewhat unconventional, given my parents' careers.",
+          "fluency_features": {"speech_rate_wpm": 155, "filled_pause_rate_per_100w": 1.8},
+          "lexical_features": {"mtld": 98.0, "top_5000_rarity_ratio": 0.33},
+          "grammar_features": {"mean_length_t_unit": 13.5, "error_free_clause_ratio": 0.90},
+          "pronunciation_features": {"pitch_range_semitones": 8.8, "stress_timing_regularity": 0.95}
+        },
+        {
+          "phase": "part2",
+          "transcript_text": "Undoubtedly the most formative skill I acquired was public speaking, which reshaped my confidence.",
+          "fluency_features": {"speech_rate_wpm": 152, "filled_pause_rate_per_100w": 2.0},
+          "lexical_features": {"mtld": 99.5, "top_5000_rarity_ratio": 0.34},
+          "grammar_features": {"mean_length_t_unit": 14.0, "error_free_clause_ratio": 0.91},
+          "pronunciation_features": {"pitch_range_semitones": 9.0, "stress_timing_regularity": 0.96}
+        },
+        {
+          "phase": "part3",
+          "transcript_text": "One could argue that formal education alone rarely cultivates genuine communicative competence.",
+          "fluency_features": {"speech_rate_wpm": 150, "filled_pause_rate_per_100w": 2.1},
+          "lexical_features": {"mtld": 97.0, "top_5000_rarity_ratio": 0.32},
+          "grammar_features": {"mean_length_t_unit": 13.8, "error_free_clause_ratio": 0.89},
+          "pronunciation_features": {"pitch_range_semitones": 8.6, "stress_timing_regularity": 0.94}
+        }
+      ],
+      "session_aggregate": {
+        "fluency_coherence": {"speech_rate_wpm": 152, "filled_pause_rate_per_100w": 2.0},
+        "lexical_resource": {"mtld": 98.2, "top_5000_rarity_ratio": 0.33},
+        "grammatical_range_accuracy": {"mean_length_t_unit": 13.8, "error_free_clause_ratio": 0.90},
+        "pronunciation": {"pitch_range_semitones": 8.8, "stress_timing_regularity": 0.95}
+      },
+      "feature_status": {
+        "fluency_coherence": "ok",
+        "lexical_resource": "ok",
+        "grammatical_range_accuracy": "ok",
+        "pronunciation": "ok"
+      },
+      "human_scores": {
+        "fluency_coherence": 8.0,
+        "lexical_resource": 8.5,
+        "grammatical_range_accuracy": 8.0,
+        "pronunciation": 8.5
+      },
+      "simulated_pass_1": {
+        "fluency_coherence": 8.0,
+        "lexical_resource": 8.5,
+        "grammatical_range_accuracy": 8.0,
+        "pronunciation": 8.5
+      },
+      "simulated_pass_2": {
+        "fluency_coherence": 8.0,
+        "lexical_resource": 8.5,
+        "grammatical_range_accuracy": 8.0,
+        "pronunciation": 8.5
+      },
+      "asr_word_confidence": 0.97,
+      "pronunciation_confidence": 0.94
+    }
+  ]
+}

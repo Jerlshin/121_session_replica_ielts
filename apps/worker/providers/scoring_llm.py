@@ -102,6 +102,21 @@ class ScoringLLMError(RuntimeError):
     """Raised when the judge cannot produce a scored output at all."""
 
 
+def build_judge_system_prompt(rubric_reference: str, *, directive_suffix: str | None = None) -> str:
+    """Renders the judge system prompt, optionally with an extra
+    calibration directive appended (Spec 04 §2 Phase 9 — "calibrate the
+    Judge prompt... weighting directives"). `directive_suffix=None`
+    (the default, used everywhere outside calibration) produces the exact
+    same prompt text this always rendered, byte for byte."""
+    prompt = JUDGE_SYSTEM_PROMPT.format(rubric_reference=rubric_reference)
+    if directive_suffix:
+        prompt = (
+            f"{prompt}\n\n<<CALIBRATION_DIRECTIVE>>\n{directive_suffix}\n"
+            "<<END_CALIBRATION_DIRECTIVE>>"
+        )
+    return prompt
+
+
 class ClaudeScoringLLM:
     """Default production `ScoringLLM` (Spec 03 §5.2) — Claude in
     structured JSON mode via `client.messages.parse()`. Real vendor call,
@@ -119,8 +134,11 @@ class ClaudeScoringLLM:
 
     source_name = "claude"
 
-    def __init__(self, model: str | None = None) -> None:
+    def __init__(self, model: str | None = None, system_prompt_suffix: str | None = None) -> None:
         self._model = model or settings.scoring_llm_model
+        # Calibration-tuning hook (Spec 04 §2 Phase 9) — unset in every
+        # non-calibration caller, so default behavior is unchanged.
+        self._system_prompt_suffix = system_prompt_suffix
 
     def score(self, judge_input: JudgeInput) -> JudgeOutput:
         if not settings.anthropic_api_key:
@@ -129,7 +147,9 @@ class ClaudeScoringLLM:
         import anthropic
 
         client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-        system_prompt = JUDGE_SYSTEM_PROMPT.format(rubric_reference=judge_input.rubric_reference)
+        system_prompt = build_judge_system_prompt(
+            judge_input.rubric_reference, directive_suffix=self._system_prompt_suffix
+        )
 
         try:
             response = client.messages.parse(
