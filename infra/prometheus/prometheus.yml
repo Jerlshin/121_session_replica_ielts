@@ -1,0 +1,15 @@
+# Scrapes the api-gateway's /metrics (Spec 01 §4.4, Spec 04 §2 Phase 8).
+# The gateway itself isn't containerized in docker-compose.dev.yml (it's
+# run via `uvicorn --reload` on the host per CLAUDE.md's dev commands), so
+# the scrape target is the host, not a compose service name.
+# `host.docker.internal` resolves on Docker Desktop (Mac/Windows) out of
+# the box; the `extra_hosts` entry on the prometheus service in
+# docker-compose.dev.yml makes it resolve on Linux too.
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: ielts-api-gateway
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:8000"]

@@ -1,7 +1,10 @@
 """grade_exam_session — the Spec 03 §2.2 DAG's chain root, enqueued once
 per closed session (Spec 03 §2.1): finalize_media -> transcribe_full_session
 -> a chord fanning the four Phase 6 feature-extraction tasks (E1-E4) out in
-parallel into synthesize_band_scores (Spec 03 §5) as the callback.
+parallel into synthesize_band_scores (Spec 03 §5) as the callback -> a
+final sweep_expired_raw_audio step (Spec 01 §7/§8, Spec 04 §2 Phase 8)
+deleting the now-redundant per-turn raw audio segments once grading has
+actually completed.
 
 Every stage uses an *immutable* signature (`.si()`, not `.s()`) — none
 receives a prior task's return value as an implicit argument. Each
@@ -29,7 +32,7 @@ from celery import chain, chord, group
 
 from celery_app import app
 from tasks.asr import transcribe_full_session
-from tasks.media import finalize_media
+from tasks.media import finalize_media, sweep_expired_raw_audio
 from tasks.nlp.fluency import compute_fluency_metrics
 from tasks.nlp.grammar import compute_grammar_metrics
 from tasks.nlp.lexical import compute_lexical_metrics
@@ -51,4 +54,10 @@ def grade_exam_session(session_id: str) -> None:
             ),
             synthesize_band_scores.si(session_id),
         ),
+        # Spec 01 §7/§8 data-minimization sweep (Spec 04 §2 Phase 8) — an
+        # immutable step chained after the chord, so it only fires once
+        # synthesize_band_scores has actually succeeded and re-reads
+        # session_id itself rather than depending on the chord's return
+        # value (same immutability rationale as every other step here).
+        sweep_expired_raw_audio.si(session_id),
     ).apply_async()

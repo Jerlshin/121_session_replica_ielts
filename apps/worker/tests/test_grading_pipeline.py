@@ -1,11 +1,11 @@
 """Chain-wiring test for grade_exam_session (Spec 03 §2.2, Spec 04 §2
-Phase 5-7) — no real Postgres/S3/broker needed here, this only proves the
+Phase 5-8) — no real Postgres/S3/broker needed here, this only proves the
 DAG is assembled correctly: finalize_media -> transcribe_full_session ->
 a chord fanning the four Phase 6 feature-extraction tasks out into
-synthesize_band_scores, every stage an immutable signature (see
-pipelines/grading_pipeline.py's docstring for why immutability matters).
-Each individual task gets its own real-infra integration test under
-tests/integration/.
+synthesize_band_scores -> sweep_expired_raw_audio (Spec 04 §2 Phase 8),
+every stage an immutable signature (see pipelines/grading_pipeline.py's
+docstring for why immutability matters). Each individual task gets its own
+real-infra integration test under tests/integration/.
 """
 import sys
 from pathlib import Path
@@ -25,7 +25,7 @@ def test_grade_exam_session_builds_chain_with_group_and_chord():
         grade_exam_session(SESSION_ID)
 
         assert mock_chain.call_count == 1
-        finalize_sig, transcribe_sig, chord_sig = mock_chain.call_args[0]
+        finalize_sig, transcribe_sig, chord_sig, sweep_sig = mock_chain.call_args[0]
 
         assert finalize_sig.task == "tasks.media.finalize_media"
         assert finalize_sig.immutable is True
@@ -51,5 +51,9 @@ def test_grade_exam_session_builds_chain_with_group_and_chord():
         for sig in group_tasks:
             assert sig.immutable is True
             assert sig.args == (SESSION_ID,)
+
+        assert sweep_sig.task == "tasks.media.sweep_expired_raw_audio"
+        assert sweep_sig.immutable is True
+        assert sweep_sig.args == (SESSION_ID,)
 
         mock_chain.return_value.apply_async.assert_called_once_with()

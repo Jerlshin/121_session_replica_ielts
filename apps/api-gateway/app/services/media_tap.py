@@ -28,12 +28,35 @@ def get_s3_client():
     )
 
 
+def configure_bucket_lifecycle(client=None) -> None:
+    """Encodes Spec 01 §7's raw-video/ retention window as actual bucket
+    infrastructure (Spec 04 §2 Phase 8 security/compliance audit) instead
+    of only a table in a doc. `PutBucketLifecycleConfiguration` replaces
+    any existing configuration wholesale, so this is safe to call again if
+    the retention policy ever changes."""
+    client = client or get_s3_client()
+    client.put_bucket_lifecycle_configuration(
+        Bucket=settings.s3_bucket,
+        LifecycleConfiguration={
+            "Rules": [
+                {
+                    "ID": "raw-video-retention",
+                    "Filter": {"Prefix": "raw-video/"},
+                    "Status": "Enabled",
+                    "Expiration": {"Days": settings.raw_video_retention_days},
+                }
+            ]
+        },
+    )
+
+
 def ensure_bucket(client=None) -> None:
     client = client or get_s3_client()
     try:
         client.head_bucket(Bucket=settings.s3_bucket)
     except ClientError:
         client.create_bucket(Bucket=settings.s3_bucket)
+        configure_bucket_lifecycle(client)
 
 
 def _wrap_pcm16_as_wav(pcm_bytes: bytes) -> bytes:

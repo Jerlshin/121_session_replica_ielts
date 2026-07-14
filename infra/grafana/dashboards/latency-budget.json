@@ -1,0 +1,116 @@
+{
+  "title": "IELTS Platform — Latency Budget (Spec 01 §4.4)",
+  "uid": "ielts-latency-budget",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "PTT release -> first audible reply (server-observable leg, hops 3-6)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "P50",
+          "expr": "histogram_quantile(0.50, sum(rate(ptt_release_to_first_audio_ms_milliseconds_bucket[5m])) by (le))",
+          "legendFormat": "P50"
+        },
+        {
+          "refId": "P95",
+          "expr": "histogram_quantile(0.95, sum(rate(ptt_release_to_first_audio_ms_milliseconds_bucket[5m])) by (le))",
+          "legendFormat": "P95"
+        },
+        {
+          "refId": "BudgetP50",
+          "expr": "380",
+          "legendFormat": "Spec 01 §4.4 target P50 (380ms)"
+        },
+        {
+          "refId": "BudgetP95",
+          "expr": "980",
+          "legendFormat": "Spec 01 §4.4 target P95 (980ms)"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Hop 3 proxy: gateway -> Gemini send",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "P50",
+          "expr": "histogram_quantile(0.50, sum(rate(gateway_to_gemini_send_ms_milliseconds_bucket[5m])) by (le))",
+          "legendFormat": "P50"
+        },
+        {
+          "refId": "P95",
+          "expr": "histogram_quantile(0.95, sum(rate(gateway_to_gemini_send_ms_milliseconds_bucket[5m])) by (le))",
+          "legendFormat": "P95"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Hop 4+5 combined: Gemini generation + return network hop",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "P50",
+          "expr": "histogram_quantile(0.50, sum(rate(gemini_response_ms_milliseconds_bucket[5m])) by (le))",
+          "legendFormat": "P50"
+        },
+        {
+          "refId": "P95",
+          "expr": "histogram_quantile(0.95, sum(rate(gemini_response_ms_milliseconds_bucket[5m])) by (le))",
+          "legendFormat": "P95"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Hop 6 proxy: gateway-internal relay enqueue",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "P50",
+          "expr": "histogram_quantile(0.50, sum(rate(gateway_relay_enqueue_ms_milliseconds_bucket[5m])) by (le))",
+          "legendFormat": "P50"
+        },
+        {
+          "refId": "P95",
+          "expr": "histogram_quantile(0.95, sum(rate(gateway_relay_enqueue_ms_milliseconds_bucket[5m])) by (le))",
+          "legendFormat": "P95"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Hop 2 proxy: client<->gateway RTT (client-reported)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "P50",
+          "expr": "histogram_quantile(0.50, sum(rate(client_gateway_rtt_ms_milliseconds_bucket[5m])) by (le))",
+          "legendFormat": "P50"
+        },
+        {
+          "refId": "P95",
+          "expr": "histogram_quantile(0.95, sum(rate(client_gateway_rtt_ms_milliseconds_bucket[5m])) by (le))",
+          "legendFormat": "P95"
+        }
+      ]
+    }
+  ]
+}

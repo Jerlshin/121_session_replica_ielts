@@ -8,7 +8,7 @@ import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "apps" / "api-gateway"))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "support"))
 
 from app.services.gemini_bridge import (  # noqa: E402
     AudioDelta,
@@ -17,7 +17,7 @@ from app.services.gemini_bridge import (  # noqa: E402
     TranscriptDelta,
     TurnComplete,
 )
-from _fake_gemini_live_server import FakeGeminiLiveServer  # noqa: E402
+from fake_gemini_live_server import FakeGeminiLiveServer  # noqa: E402
 
 FIXTURE = (
     Path(__file__).resolve().parent.parent

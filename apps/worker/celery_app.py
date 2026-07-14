@@ -34,6 +34,7 @@ app.conf.update(
     # too.
     task_routes={
         "tasks.media.finalize_media": {"queue": "media"},
+        "tasks.media.sweep_expired_raw_audio": {"queue": "media"},
         "tasks.asr.transcribe_full_session": {"queue": "asr"},
         "tasks.nlp.*": {"queue": "nlp"},
         "tasks.pronunciation.*": {"queue": "pronunciation"},

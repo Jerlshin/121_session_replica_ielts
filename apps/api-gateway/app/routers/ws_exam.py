@@ -25,6 +25,7 @@ from app.services.gemini_bridge import (
     TurnComplete,
     load_base_persona,
 )
+from app.services import observability
 from app.services.media_tap import persist_turn_audio
 
 router = APIRouter(tags=["ws"])
@@ -159,7 +160,12 @@ async def exam_media_loopback(
 
     turn_id: uuid.UUID | None = None
     buffer = bytearray()
-    turn_release_monotonic: float | None = None
+    # t0/t1 bracket hop 3 (gateway->Gemini send, Spec 01 §4.4) -- captured
+    # here since activity_end handling and first-AudioDelta handling live
+    # in two different coroutines below; see observability.py's docstring
+    # for the full t0-t3 hop breakdown.
+    turn_t0: float | None = None
+    turn_t1: float | None = None
     awaiting_first_audio = False
 
     async def writer() -> None:
@@ -173,7 +179,7 @@ async def exam_media_loopback(
                 await websocket.send_json(item)
 
     async def pump_client_to_gemini() -> None:
-        nonlocal turn_id, buffer, turn_release_monotonic, awaiting_first_audio
+        nonlocal turn_id, buffer, turn_t0, turn_t1, awaiting_first_audio
         while True:
             message = await websocket.receive()
             if message["type"] == "websocket.disconnect":
@@ -195,7 +201,9 @@ async def exam_media_loopback(
                 elif control_type == "activity_end":
                     if turn_id is None:
                         continue
+                    turn_t0 = time.time()
                     await bridge.send_activity_end()
+                    turn_t1 = time.time()
                     # Must run before on_activity_end(): it captures the
                     # phase this turn was actually spoken in, before that
                     # same activity_end potentially advances the phase
@@ -203,7 +211,6 @@ async def exam_media_loopback(
                     # 0005's docstring for why the ordering matters).
                     turn_phase = orchestrator.on_turn_flush_started(turn_id)
                     await orchestrator.on_activity_end()
-                    turn_release_monotonic = time.monotonic()
                     awaiting_first_audio = True
                     asyncio.create_task(
                         _flush_turn_in_background(
@@ -216,6 +223,24 @@ async def exam_media_loopback(
                 elif control_type == "cue_card_ack":
                     await orchestrator.on_cue_card_ack()
 
+                elif control_type == "client_ping":
+                    # Client<->gateway RTT (Spec 01 §4.4 hop 2 proxy) can't
+                    # be measured unilaterally server-side — echoed back so
+                    # the client can compute it and report it via
+                    # rtt_report (see observability.py's module docstring).
+                    await outbox.put(
+                        {
+                            "type": "pong",
+                            "client_ts": control.get("client_ts"),
+                            "server_ts": time.time(),
+                        }
+                    )
+
+                elif control_type == "rtt_report":
+                    rtt_ms = control.get("rtt_ms")
+                    if isinstance(rtt_ms, (int, float)):
+                        observability.record_client_rtt(session_id=session_id, rtt_ms=float(rtt_ms))
+
             elif bytes_payload is not None:
                 if turn_id is None:
                     # A frame arriving outside an active turn is dropped —
@@ -226,13 +251,18 @@ async def exam_media_loopback(
                 await bridge.send_audio_frame(bytes_payload)
 
     async def pump_gemini_to_client() -> None:
-        nonlocal turn_release_monotonic, awaiting_first_audio
+        nonlocal turn_t0, turn_t1, awaiting_first_audio
         async for event in bridge.receive_events():
             if isinstance(event, AudioDelta):
-                await outbox.put(event.pcm_bytes)
-                if awaiting_first_audio and turn_release_monotonic is not None:
-                    elapsed_ms = (time.monotonic() - turn_release_monotonic) * 1000
+                if awaiting_first_audio and turn_t0 is not None and turn_t1 is not None:
+                    t2 = time.time()
+                    await outbox.put(event.pcm_bytes)
+                    t3 = time.time()
                     awaiting_first_audio = False
+                    values = observability.record_ptt_turn(
+                        session_id=session_id, t0=turn_t0, t1=turn_t1, t2=t2, t3=t3
+                    )
+                    elapsed_ms = values["ptt_release_to_first_audio_ms"]
                     log = logger.warning if elapsed_ms > _LATENCY_P95_BUDGET_MS else logger.info
                     log(
                         "turn_latency session=%s server_hop_ms=%.1f budget_p95_ms=%d "
@@ -241,6 +271,8 @@ async def exam_media_loopback(
                         elapsed_ms,
                         _LATENCY_P95_BUDGET_MS,
                     )
+                else:
+                    await outbox.put(event.pcm_bytes)
             elif isinstance(event, TranscriptDelta):
                 await outbox.put({"type": "transcript_delta", "text": event.text})
             elif isinstance(event, TurnComplete):

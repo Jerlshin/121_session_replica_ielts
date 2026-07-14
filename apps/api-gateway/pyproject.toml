@@ -17,6 +17,12 @@ dependencies = [
     "boto3>=1.35",
     "websockets>=13.1",
     "celery>=5.4",
+    # Latency profiling (Spec 01 §4.4, Spec 04 §2 Phase 8) -- see
+    # app/services/observability.py for what's actually instrumented.
+    "opentelemetry-api>=1.27",
+    "opentelemetry-sdk>=1.27",
+    "opentelemetry-exporter-prometheus>=0.48b0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.27",
 ]
 
 [project.optional-dependencies]

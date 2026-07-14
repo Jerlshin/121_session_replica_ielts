@@ -88,8 +88,10 @@ class ExamOrchestrator:
         # deadline is set here — that would reset the clock).
         await self._inject_template("reanchor")
         if self._phase == ExamPhase.PART2_PREP:
+            await self._repush_live_deadline("part2_prep")
             self._watchdog_task = asyncio.create_task(self._run_prep_watchdog())
         elif self._phase == ExamPhase.PART2_LONG_TURN:
+            await self._repush_live_deadline("part2_long_turn")
             self._watchdog_task = asyncio.create_task(self._run_long_turn_watchdog())
 
     async def close(self) -> None:
@@ -153,6 +155,29 @@ class ExamOrchestrator:
 
     def on_turn_flush_complete(self, turn_id: uuid.UUID) -> None:
         self._pending_flush_turn_ids.discard(turn_id)
+
+    # -- client-facing timer UI (Spec 04 §2 Phase 8) -------------------------
+
+    async def _push_timer_deadline(self, name: str, deadline_epoch_s: float) -> None:
+        """Lets the client render an accurate live countdown instead of
+        guessing — the deadline itself is still exclusively server-
+        authoritative (`timers.py`'s Redis absolute deadline), this only
+        tells the client what it is."""
+        await self.outbox.put(
+            {
+                "type": "timer_deadline",
+                "name": name,
+                "deadline_epoch_ms": round(deadline_epoch_s * 1000),
+            }
+        )
+
+    async def _repush_live_deadline(self, name: str) -> None:
+        """Resume path counterpart to `_push_timer_deadline`: a reconnecting
+        client has no idea what the still-running deadline is until told,
+        so re-read it from Redis (never resetting it) and push it again."""
+        deadline = await timers.get_deadline(self.session_id, name)
+        if deadline is not None:
+            await self._push_timer_deadline(name, deadline)
 
     # -- watchdogs ----------------------------------------------------------
 
@@ -241,16 +266,20 @@ class ExamOrchestrator:
             )
 
         elif phase == ExamPhase.PART2_PREP:
-            await timers.set_deadline(self.session_id, "part2_prep", settings.part2_prep_seconds)
+            deadline = await timers.set_deadline(
+                self.session_id, "part2_prep", settings.part2_prep_seconds
+            )
+            await self._push_timer_deadline("part2_prep", deadline)
             await self.outbox.put(
                 {"type": "scripted_audio", "asset": "you_have_one_minute_to_prepare.wav"}
             )
             self._watchdog_task = asyncio.create_task(self._run_prep_watchdog())
 
         elif phase == ExamPhase.PART2_LONG_TURN:
-            await timers.set_deadline(
+            deadline = await timers.set_deadline(
                 self.session_id, "part2_long_turn", settings.part2_long_turn_seconds
             )
+            await self._push_timer_deadline("part2_long_turn", deadline)
             self._watchdog_task = asyncio.create_task(self._run_long_turn_watchdog())
 
         elif phase == ExamPhase.PART2_ROUNDOFF:

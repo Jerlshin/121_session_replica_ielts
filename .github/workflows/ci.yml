@@ -102,3 +102,10 @@ jobs:
 
       - name: Integration tests
         run: pytest tests/integration
+
+      - name: Load harness smoke test
+        # Not a real load test (Spec 01 §9's ~1000-session ceiling is a
+        # manual, opt-in stress run) — proves tests/load/live_session_load.py
+        # itself works, at low concurrency, against a real gateway
+        # subprocess + fake Gemini server (Spec 04 §2 Phase 8).
+        run: pytest tests/load

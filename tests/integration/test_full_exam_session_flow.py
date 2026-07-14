@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "apps" / "api-gateway"))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "support"))
 
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import select  # noqa: E402
@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # no
 from app.config import settings  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import ExamSession, ExamSessionEvent  # noqa: E402
-from _fake_gemini_live_server import FakeGeminiLiveServerHandle  # noqa: E402
+from fake_gemini_live_server import FakeGeminiLiveServerHandle  # noqa: E402
 
 FIXTURE = (
     Path(__file__).resolve().parent.parent

@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.db import engine
 from app.routers import auth, internal_debug, sessions, ws_exam
+from app.services import observability
 
 
 @asynccontextmanager
@@ -32,6 +33,10 @@ app.include_router(auth.router)
 app.include_router(sessions.router)
 app.include_router(ws_exam.router)
 app.include_router(internal_debug.router)
+
+# Prometheus scrape target (Spec 01 §4.4, Spec 04 §2 Phase 8) — see
+# app/services/observability.py for what's instrumented.
+app.mount("/metrics", observability.metrics_asgi_app())
 
 
 @app.get("/healthz")

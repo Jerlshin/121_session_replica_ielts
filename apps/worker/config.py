@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     s3_secret_key: str = "ielts-dev-secret"
     s3_bucket: str = "ielts-media"
     s3_region: str = "us-east-1"
+    # Spec 01 §7 illustrative retention window for raw-video/ ("e.g. 90
+    # days, configurable per institution contract") — enforced as a real
+    # bucket lifecycle rule (Spec 04 §2 Phase 8), not just documentation.
+    raw_video_retention_days: int = 90
 
     # Backline transcription (Spec 03 §3). Primary vendor; empty by default
     # so a missing key fails loudly rather than silently no-op-ing.

@@ -60,8 +60,38 @@ services:
       timeout: 5s
       retries: 10
 
+  # Latency profiling (Spec 01 §4.4, Spec 04 §2 Phase 8). The gateway
+  # itself runs on the host (`uvicorn --reload`, per CLAUDE.md's dev
+  # commands), not as a compose service — see infra/prometheus/prometheus.yml
+  # for the scrape target.
+  prometheus:
+    image: prom/prometheus:latest
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # no-op on Docker Desktop, needed on Linux
+    volumes:
+      - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true" # dev-only convenience, never set in a real deploy
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ../grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../grafana/dashboards:/etc/grafana/provisioning/dashboards/json:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3001:3000" # 3000 is already apps/web's dev port
+    depends_on:
+      - prometheus
+
 volumes:
   postgres-data:
   redis-data:
   rabbitmq-data:
   minio-data:
+  prometheus-data:
+  grafana-data:

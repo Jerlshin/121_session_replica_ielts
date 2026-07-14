@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     s3_secret_key: str = "ielts-dev-secret"
     s3_bucket: str = "ielts-media"
     s3_region: str = "us-east-1"
+    # Spec 01 §7 illustrative retention window for raw-video/ ("e.g. 90
+    # days, configurable per institution contract") — enforced as a real
+    # bucket lifecycle rule (Spec 04 §2 Phase 8), not just documentation.
+    raw_video_retention_days: int = 90
 
     # Gemini Live (Spec 01 §4.1, §3). Model is config-driven, not hardcoded,
     # so a new Live model version is a deploy-time swap, not a client release.

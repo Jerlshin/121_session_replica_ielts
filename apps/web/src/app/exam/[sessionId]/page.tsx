@@ -5,6 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 
 import { PlaybackJitterBuffer } from "@/audio/playback-jitter-buffer";
 import { ProctoringRecorder } from "@/audio/proctoring-recorder";
+import { ConnectionStatusBanner } from "@/components/exam/ConnectionStatusBanner";
+import { CountdownPanel } from "@/components/exam/CountdownPanel";
+import { CueCardPanel } from "@/components/exam/CueCardPanel";
 import { PTTButton } from "@/components/exam/PTTButton";
 import { confirmVideoUpload, getVideoUploadUrl, uploadVideoBlob, wsBaseUrl } from "@/lib/api";
 import { useExamStore } from "@/state/examStore";
@@ -30,6 +33,10 @@ export default function ExamRoomPage() {
   const setPttActive = useExamStore((s) => s.setPttActive);
   const lastTurnId = useExamStore((s) => s.lastTurnId);
   const setLastTurnId = useExamStore((s) => s.setLastTurnId);
+  const cueCard = useExamStore((s) => s.cueCard);
+  const setCueCard = useExamStore((s) => s.setCueCard);
+  const timerDeadline = useExamStore((s) => s.timerDeadline);
+  const setTimerDeadline = useExamStore((s) => s.setTimerDeadline);
 
   const [log, setLog] = useState<string[]>([]);
   const socketRef = useRef<ExamSocketClient | null>(null);
@@ -98,9 +105,22 @@ export default function ExamRoomPage() {
             appendLog("examiner turn interrupted");
           } else if (message.type === "server_going_away") {
             appendLog(`server going away in ${message.time_left_ms ?? "?"}ms — expect a reconnect`);
+          } else if (message.type === "cue_card") {
+            setCueCard({
+              cueCardId: message.cue_card_id,
+              topic: message.topic,
+              bullets: message.bullets,
+            });
+            appendLog(`cue card presented: ${message.topic}`);
+          } else if (message.type === "timer_deadline") {
+            setTimerDeadline({ name: message.name, deadlineEpochMs: message.deadline_epoch_ms });
+            appendLog(`timer started: ${message.name}`);
+          } else if (message.type === "scripted_audio") {
+            appendLog(`scripted audio cue: ${message.asset}`);
           }
         },
         onAudioFrame: (frame) => jitterBufferRef.current?.enqueue(frame),
+        onReconnecting: () => setConnectionStatus("reconnecting"),
         onClose: () => setConnectionStatus("disconnected"),
       });
       socketRef.current = socket;
@@ -154,16 +174,33 @@ export default function ExamRoomPage() {
 
   return (
     <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      <h1>Media Spine Test — Session {sessionId}</h1>
+      <h1>Exam Room — Session {sessionId}</h1>
+
+      <ConnectionStatusBanner status={connectionStatus} />
+
       <p>Status: {connectionStatus}</p>
       {lastTurnId && <p>Last turn: {lastTurnId}</p>}
 
-      <PTTButton
-        active={isPttActive}
-        disabled={connectionStatus !== "connected"}
-        onPress={handlePress}
-        onRelease={() => void handleRelease()}
-      />
+      {cueCard && (
+        <div style={{ marginTop: "1rem" }}>
+          <CueCardPanel cueCard={cueCard} />
+        </div>
+      )}
+
+      {timerDeadline && (
+        <div style={{ marginTop: "1rem" }}>
+          <CountdownPanel timerDeadline={timerDeadline} />
+        </div>
+      )}
+
+      <div style={{ marginTop: "1.5rem" }}>
+        <PTTButton
+          active={isPttActive}
+          disabled={connectionStatus !== "connected"}
+          onPress={handlePress}
+          onRelease={() => void handleRelease()}
+        />
+      </div>
 
       <pre style={{ marginTop: "2rem", background: "#111", color: "#0f0", padding: "1rem" }}>
         {log.join("\n")}
