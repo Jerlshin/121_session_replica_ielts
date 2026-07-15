@@ -17,17 +17,28 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
+import time
 from pathlib import Path
 
 import websockets
 
 
 class FakeGeminiLiveServer:
-    def __init__(self, fixture_path: Path):
+    def __init__(self, fixture_path: Path, *, activity_end_delay_s: float = 0.0):
         self.fixture = json.loads(fixture_path.read_text())
         self.received_messages: list[dict] = []
+        # Parallel to received_messages — time.monotonic() at the instant
+        # each message was received, so timing-sensitive tests (e.g.
+        # asserting a directive wasn't sent until a prior turn's
+        # TurnComplete had actually gone out) don't have to guess.
+        self.received_at: list[float] = []
         self.url: str = ""
         self._server: websockets.WebSocketServer | None = None
+        # Simulates a slow Gemini reply to a candidate's activityEnd —
+        # lets tests prove the orchestrator's directive dispatcher actually
+        # waits for TurnComplete instead of racing it (see
+        # test_full_exam_session_flow.py's turn-taking regression test).
+        self._activity_end_delay_s = activity_end_delay_s
 
     async def __aenter__(self) -> "FakeGeminiLiveServer":
         self._server = await websockets.serve(self._handle, "localhost", 0)
@@ -46,6 +57,7 @@ class FakeGeminiLiveServer:
             async for raw in ws:
                 message = json.loads(raw)
                 self.received_messages.append(message)
+                self.received_at.append(time.monotonic())
 
                 if "setup" in message:
                     for scripted in responses.get("after_setup", []):
@@ -56,8 +68,22 @@ class FakeGeminiLiveServer:
                         await ws.send(json.dumps(scripted))
 
                 elif "realtimeInput" in message and "activityEnd" in message["realtimeInput"]:
-                    for scripted in responses.get("after_activity_end", []):
-                        await ws.send(json.dumps(scripted))
+                    scripted_list = responses.get("after_activity_end", [])
+                    if self._activity_end_delay_s:
+                        # Fire-and-forget so this loop keeps reading (and
+                        # timestamping) subsequent incoming messages right
+                        # away — if the reply were awaited inline here, this
+                        # single-coroutine `async for` wouldn't get back
+                        # around to read/record the *next* message until
+                        # after the sleep, making received_at reflect this
+                        # server's own artificial delay instead of when the
+                        # client actually sent that next message (which is
+                        # exactly the thing turn-taking regression tests
+                        # need to observe honestly).
+                        asyncio.create_task(self._reply_after_delay(ws, scripted_list))
+                    else:
+                        for scripted in scripted_list:
+                            await ws.send(json.dumps(scripted))
 
                 # activityStart / audio chunks are recorded but not responded
                 # to directly — Gemini's real reply only comes after
@@ -66,6 +92,14 @@ class FakeGeminiLiveServer:
             # The client (gemini_bridge.py) or the test harness tearing
             # itself down mid-test is an expected, non-graceful close here —
             # not a bug to surface as a noisy traceback in test output.
+            pass
+
+    async def _reply_after_delay(self, ws, scripted_list: list[dict]) -> None:
+        await asyncio.sleep(self._activity_end_delay_s)
+        try:
+            for scripted in scripted_list:
+                await ws.send(json.dumps(scripted))
+        except websockets.exceptions.ConnectionClosed:
             pass
 
 
@@ -77,8 +111,9 @@ class FakeGeminiLiveServerHandle:
     shared between them — same pattern as pointing a client at any other
     local network service."""
 
-    def __init__(self, fixture_path: Path):
+    def __init__(self, fixture_path: Path, *, activity_end_delay_s: float = 0.0):
         self._fixture_path = fixture_path
+        self._activity_end_delay_s = activity_end_delay_s
         self._loop: asyncio.AbstractEventLoop | None = None
         self._fake: FakeGeminiLiveServer | None = None
         self._stop_event: asyncio.Event | None = None
@@ -91,7 +126,9 @@ class FakeGeminiLiveServerHandle:
         self._loop.run_until_complete(self._main())
 
     async def _main(self) -> None:
-        async with FakeGeminiLiveServer(self._fixture_path) as fake:
+        async with FakeGeminiLiveServer(
+            self._fixture_path, activity_end_delay_s=self._activity_end_delay_s
+        ) as fake:
             self._fake = fake
             self._stop_event = asyncio.Event()
             self._ready.set()
@@ -117,3 +154,8 @@ class FakeGeminiLiveServerHandle:
     def received_messages(self) -> list[dict]:
         assert self._fake is not None
         return self._fake.received_messages
+
+    @property
+    def received_at(self) -> list[float]:
+        assert self._fake is not None
+        return self._fake.received_at

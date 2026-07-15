@@ -86,6 +86,26 @@ class ExamOrchestrator:
         self._finalizing_watchdog_task: asyncio.Task | None = None
         self._pending_flush_turn_ids: set[uuid.UUID] = set()
 
+        # Guards against "continuous questioning": Gemini's Live session
+        # generates a new spoken turn for *any* completed input turn it
+        # receives, including our injected [EXAMINER_DIRECTIVE] turns — not
+        # just the candidate's own activityEnd. Firing a directive
+        # immediately after the candidate's activity_end (before Gemini has
+        # even replied to what the candidate just said) queues up two
+        # completed input turns back-to-back, and the candidate hears the
+        # examiner deliver two responses/questions in a row with no chance
+        # to answer either. `_gemini_turn_complete` tracks whether Gemini's
+        # reply to whatever we last sent it has actually finished (its own
+        # TurnComplete event); `_directive_queue` + `_directive_dispatcher_task`
+        # serialize every directive behind that, so "one question at a
+        # time" (Spec 02 §6.1 rule 2) is enforced at the transport level,
+        # not just trusted to the prompt. Starts "set" — nothing is in
+        # flight before the first directive (INTRO) is sent.
+        self._gemini_turn_complete = asyncio.Event()
+        self._gemini_turn_complete.set()
+        self._directive_queue: asyncio.Queue[str] = asyncio.Queue()
+        self._directive_dispatcher_task: asyncio.Task | None = None
+
     @property
     def phase(self) -> ExamPhase:
         return self._phase
@@ -93,6 +113,8 @@ class ExamOrchestrator:
     # -- connection lifecycle -------------------------------------------------
 
     async def start(self) -> None:
+        self._directive_dispatcher_task = asyncio.create_task(self._dispatch_directives())
+
         async with AsyncSessionLocal() as db:
             self._phase = await fsm_engine.get_current_phase(db, self.session_id)
 
@@ -134,7 +156,11 @@ class ExamOrchestrator:
         # rapid phase transitions (Part 1/3's watchdogs included).
         tasks = [
             task
-            for task in (self._watchdog_task, self._finalizing_watchdog_task)
+            for task in (
+                self._watchdog_task,
+                self._finalizing_watchdog_task,
+                self._directive_dispatcher_task,
+            )
             if task is not None and not task.done()
         ]
         for task in tasks:
@@ -152,6 +178,12 @@ class ExamOrchestrator:
     # -- external triggers ------------------------------------------------
 
     async def on_gemini_turn_complete(self) -> None:
+        # Unblocks anything waiting in `_directive_queue` (see
+        # `_dispatch_directives`) — Gemini has now actually finished
+        # speaking whatever it was about to say, so it's safe to hand it
+        # the next out-of-band directive without talking over itself.
+        self._gemini_turn_complete.set()
+
         # Only CLOSE advances on Gemini's own turn-complete — the closing
         # statement is model-initiated with no candidate reply expected.
         # Every other phase advances on the candidate's activity_end (see
@@ -161,6 +193,12 @@ class ExamOrchestrator:
             await self._advance(ExamEvent.CLOSE_DELIVERED, reason="close_delivered")
 
     async def on_activity_end(self) -> None:
+        # The candidate's activityEnd always elicits exactly one Gemini
+        # response turn — mark one as in flight so any directive this same
+        # call ends up queuing (reanchor, part1_extend, or a phase-advance's
+        # on-enter directive) waits for it instead of racing it.
+        self._gemini_turn_complete.clear()
+
         if self._phase == ExamPhase.PART2_LONG_TURN:
             await self._advance(ExamEvent.LONG_TURN_ENDED, reason="candidate_released_ptt")
             return
@@ -250,9 +288,7 @@ class ExamOrchestrator:
         if not expired:
             return
         await timers.clear_deadline(self.session_id, "part1_max")
-        await self.bridge.inject_directive(
-            load_directive(settings.prompt_templates_dir, "part1_wrap_up")
-        )
+        await self._queue_directive(load_directive(settings.prompt_templates_dir, "part1_wrap_up"))
         while self._phase in _PART1_COMPLETION_EVENT:
             event = _PART1_COMPLETION_EVENT[self._phase]
             is_final_hop = self._phase == ExamPhase.PART1_TOPIC_C
@@ -271,9 +307,7 @@ class ExamOrchestrator:
         if not expired:
             return
         await timers.clear_deadline(self.session_id, "part3_discussion")
-        await self.bridge.inject_directive(
-            load_directive(settings.prompt_templates_dir, "part3_wrap_up")
-        )
+        await self._queue_directive(load_directive(settings.prompt_templates_dir, "part3_wrap_up"))
         await self._advance(ExamEvent.DISCUSSION_COMPLETE, reason="part3_dynamic_timer_expired")
 
     async def _run_prep_watchdog(self) -> None:
@@ -294,6 +328,14 @@ class ExamOrchestrator:
         if not hard_cutoff_reached:
             return
         await timers.clear_deadline(self.session_id, "part2_long_turn")
+        # wait_for_long_turn_cutoff() just sent DIRECTIVE_PART2_HARD_STOP
+        # straight to the bridge (bypassing `_directive_queue` on purpose —
+        # the hard cutoff must interrupt immediately, never wait its turn).
+        # That directive still elicits a new spoken turn from Gemini ("Thank
+        # you, that's the end of your two minutes."), so mark one as in
+        # flight here — otherwise PART2_ROUNDOFF's queued directive would
+        # see a stale "clear" completion event and jump in over it.
+        self._gemini_turn_complete.clear()
         await self._advance(ExamEvent.LONG_TURN_ENDED, reason="hard_cutoff")
 
     async def _run_finalizing_watchdog(self) -> None:
@@ -475,4 +517,46 @@ class ExamOrchestrator:
     async def _inject_template(self, name: str, **kwargs) -> None:
         template = load_directive(settings.prompt_templates_dir, name)
         text = template.format(**kwargs) if kwargs else template
-        await self.bridge.inject_directive(text)
+        await self._queue_directive(text)
+
+    async def _queue_directive(self, text: str) -> None:
+        """Hands `text` to `_dispatch_directives` instead of sending it to
+        the bridge inline — enqueuing is instant, so callers like
+        `_advance()` still update phase state and commit the event log
+        synchronously (CLAUDE.md rule 5); only the actual "tell Gemini"
+        side effect is deferred to wait its turn."""
+        await self._directive_queue.put(text)
+
+    async def _dispatch_directives(self) -> None:
+        """The single place that actually calls `bridge.inject_directive`
+        for phase-transition/reanchor directives (Spec 02 §6.2) — serialized
+        one at a time behind `_gemini_turn_complete` so a directive is never
+        sent while Gemini's reply to the previous turn (the candidate's own,
+        or a prior directive's) is still in flight. Without this, the Live
+        session would receive two completed input turns back-to-back and
+        answer both, producing exactly the "examiner fires off continuous
+        questions before the candidate can answer" symptom this exists to
+        prevent. Runs for the life of the connection; cancelled in close()."""
+        while True:
+            text = await self._directive_queue.get()
+            try:
+                await asyncio.wait_for(
+                    self._gemini_turn_complete.wait(),
+                    timeout=settings.directive_dispatch_timeout_seconds,
+                )
+            except TimeoutError:
+                # A candidate barge-in (Interrupted) can abort a Gemini turn
+                # without it ever emitting TurnComplete — waiting forever
+                # here would stall the whole exam behind a signal that's
+                # never coming. Log and send anyway rather than hang.
+                logger.warning(
+                    "session=%s directive dispatch timed out waiting for Gemini "
+                    "turn-complete after %.1fs — sending anyway",
+                    self.session_id,
+                    settings.directive_dispatch_timeout_seconds,
+                )
+            # Sending this directive itself elicits a new spoken turn from
+            # Gemini — re-arm the gate so the *next* queued directive (if
+            # any) waits for this one instead of piling on top of it.
+            self._gemini_turn_complete.clear()
+            await self.bridge.inject_directive(text)

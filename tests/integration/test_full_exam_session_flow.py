@@ -485,3 +485,92 @@ def test_part2_hard_cutoff_unmutes_input_for_subsequent_turns():
                     assert sequence[:10] == EXPECTED_PHASE_SEQUENCE[:10]
     finally:
         fake.stop()
+
+
+def _first_client_content_index_after(messages: list[dict], after_index: int) -> int | None:
+    return next(
+        (i for i in range(after_index + 1, len(messages)) if "clientContent" in messages[i]),
+        None,
+    )
+
+
+def _last_activity_end_index(messages: list[dict]) -> int | None:
+    indices = [
+        i
+        for i, message in enumerate(messages)
+        if "realtimeInput" in message and "activityEnd" in message["realtimeInput"]
+    ]
+    return max(indices) if indices else None
+
+
+def test_directive_not_sent_until_prior_gemini_turn_completes():
+    """Regression test for the "examiner fires off continuous questions
+    before the candidate can answer" bug: exam_orchestrator.py used to call
+    bridge.inject_directive() for a phase-transition directive immediately
+    after the candidate's own activity_end, without waiting for Gemini's
+    reply to that same activity_end to actually finish (its TurnComplete).
+    Since the Live API generates a new spoken turn for *any* completed
+    input turn it receives — including our injected [EXAMINER_DIRECTIVE]
+    turns, not just the candidate's own audio — that raced two output turns
+    back-to-back with no candidate input in between.
+
+    This configures the fake Gemini server to reply slowly to activityEnd
+    and drives the one candidate turn that clears INTRO (intro_turns=1)
+    straight into PART1_TOPIC_A, whose on-enter directive is queued
+    immediately behind it. If the dispatcher (exam_orchestrator._dispatch_
+    directives) is correctly waiting for TurnComplete rather than racing
+    it, that directive can't reach the fake server until at least the
+    configured delay has elapsed since activity_end arrived.
+    """
+    delay_s = 1.0
+    fake = FakeGeminiLiveServerHandle(FIXTURE, activity_end_delay_s=delay_s).start()
+    try:
+        with _override_settings(
+            gemini_live_ws_url=fake.url,
+            gemini_api_key="fixture-unused-key",
+            intro_turns=1,
+        ):
+            with TestClient(app) as client:
+                token, session_id = _login_and_create_session(
+                    client, "turn-taking@example.com"
+                )
+                with client.websocket_connect(f"/ws/exam/{session_id}?token={token}") as ws:
+                    _wait_for_phase_count(session_id, 2, timeout_s=5.0)
+
+                    _send_ptt_turn(ws)  # clears INTRO -> PART1_TOPIC_A
+                    sequence = _wait_for_phase_count(session_id, 3, timeout_s=5.0)
+                    assert sequence[:3] == EXPECTED_PHASE_SEQUENCE[:3]
+
+                    # Phase state (the assertion above) advances immediately
+                    # on the candidate's activity_end — only the spoken
+                    # directive to Gemini is deferred, so give that time to
+                    # actually land before inspecting what the fake server saw.
+                    deadline = time.monotonic() + delay_s + 5.0
+                    directive_index = None
+                    activity_end_index = None
+                    while time.monotonic() < deadline:
+                        messages = fake.received_messages
+                        activity_end_index = _last_activity_end_index(messages)
+                        if activity_end_index is not None:
+                            directive_index = _first_client_content_index_after(
+                                messages, activity_end_index
+                            )
+                            if directive_index is not None:
+                                break
+                        time.sleep(0.05)
+
+                    assert activity_end_index is not None and directive_index is not None, (
+                        "PART1_TOPIC_A's directive never reached the fake Gemini server"
+                    )
+
+                    elapsed = (
+                        fake.received_at[directive_index] - fake.received_at[activity_end_index]
+                    )
+                    assert elapsed >= delay_s - 0.1, (
+                        f"directive for PART1_TOPIC_A was sent only {elapsed:.2f}s after "
+                        f"activity_end (expected >= {delay_s}s) — the dispatcher did not wait "
+                        "for Gemini's prior TurnComplete before injecting the next directive, "
+                        "reintroducing the continuous-questioning race"
+                    )
+    finally:
+        fake.stop()

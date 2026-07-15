@@ -1,0 +1,204 @@
+@import "tailwindcss";
+
+/* next-themes stamps class="dark" on <html> (attribute="class"); this tells
+   Tailwind v4's utilities (dark:*) to key off that instead of the default
+   prefers-color-scheme strategy. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens — values are the validated reference palette from the
+   dataviz skill (references/palette.md), reused unchanged so every chart,
+   surface, and status color in the app is CVD-checked and contrast-checked
+   by construction rather than by eye. */
+:root {
+  --surface: #fcfcfb;
+  --surface-raised: #ffffff;
+  --page: #f9f9f7;
+  --ink: #0b0b0b;
+  --ink-secondary: #52514e;
+  --ink-muted: #898781;
+  --border: rgba(11, 11, 11, 0.1);
+  --gridline: #e1e0d9;
+  --baseline: #c3c2b7;
+
+  --accent-blue: #2a78d6;
+  --accent-aqua: #1baf7a;
+  --accent-yellow: #eda100;
+  --accent-green: #008300;
+  --accent-violet: #4a3aa7;
+  --accent-red: #e34948;
+  --accent-magenta: #e87ba4;
+  --accent-orange: #eb6834;
+
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
+
+  /* Exam-room voice states: calm blue for the examiner, energetic
+     violet/magenta for the candidate, muted neutral for idle breathing. */
+  --voice-examiner: var(--accent-blue);
+  --voice-examiner-glow: #6fa8ea;
+  --voice-user: var(--accent-violet);
+  --voice-user-glow: #b98be0;
+  --voice-idle: var(--ink-muted);
+
+  color-scheme: light;
+}
+
+.dark {
+  --surface: #1a1a19;
+  --surface-raised: #232322;
+  --page: #0d0d0d;
+  --ink: #ffffff;
+  --ink-secondary: #c3c2b7;
+  --ink-muted: #898781;
+  --border: rgba(255, 255, 255, 0.1);
+  --gridline: #2c2c2a;
+  --baseline: #383835;
+
+  --accent-blue: #3987e5;
+  --accent-aqua: #199e70;
+  --accent-yellow: #c98500;
+  --accent-green: #008300;
+  --accent-violet: #9085e9;
+  --accent-red: #e66767;
+  --accent-magenta: #d55181;
+  --accent-orange: #d95926;
+
+  --voice-examiner: var(--accent-blue);
+  --voice-examiner-glow: #5ea3f2;
+  --voice-user: var(--accent-violet);
+  --voice-user-glow: #c3b8f5;
+  --voice-idle: var(--ink-muted);
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-page: var(--page);
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+  --color-border: var(--border);
+  --color-gridline: var(--gridline);
+  --color-baseline: var(--baseline);
+
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-aqua: var(--accent-aqua);
+  --color-accent-yellow: var(--accent-yellow);
+  --color-accent-green: var(--accent-green);
+  --color-accent-violet: var(--accent-violet);
+  --color-accent-red: var(--accent-red);
+  --color-accent-magenta: var(--accent-magenta);
+  --color-accent-orange: var(--accent-orange);
+
+  --color-status-good: var(--status-good);
+  --color-status-warning: var(--status-warning);
+  --color-status-serious: var(--status-serious);
+  --color-status-critical: var(--status-critical);
+
+  --color-voice-examiner: var(--voice-examiner);
+  --color-voice-user: var(--voice-user);
+  --color-voice-idle: var(--voice-idle);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  --animate-breathe: breathe 4.2s ease-in-out infinite;
+  --animate-pulse-ring: pulse-ring 1.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  --animate-slide-up-fade: slide-up-fade 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-shimmer: shimmer 2.2s linear infinite;
+  --animate-flash-highlight: flash-highlight 1.5s ease-out 1;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.045);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+  80% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+@keyframes slide-up-fade {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes flash-highlight {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  20% {
+    box-shadow: 0 0 0 4px var(--accent-blue);
+  }
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background-color: var(--page);
+  color: var(--ink);
+}
+
+/* Visually hidden but screen-reader-accessible — the shared version of the
+   pattern each exam component used to inline separately. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Focus ring: consistent, high-contrast, and only on keyboard focus. */
+:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 3px;
+}

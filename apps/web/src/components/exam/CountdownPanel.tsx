@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 
+import { cn } from "@/lib/utils";
 import type { TimerDeadline } from "@/state/examStore";
 
 // Renders the server-authoritative Part 2 timers (Spec 02 §3.3, Spec 04 §2
@@ -18,20 +20,8 @@ const TIMER_LABELS: Record<string, string> = {
   part2_long_turn: "Speaking time remaining",
 };
 
-// Visually hidden but screen-reader-accessible, per the standard "sr-only"
-// pattern — no global stylesheet exists yet in this app to put a reusable
-// class in, so this is inlined here.
-const srOnlyStyle: CSSProperties = {
-  position: "absolute",
-  width: "1px",
-  height: "1px",
-  padding: 0,
-  margin: "-1px",
-  overflow: "hidden",
-  clip: "rect(0, 0, 0, 0)",
-  whiteSpace: "nowrap",
-  border: 0,
-};
+const RING_RADIUS = 30;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 interface CountdownPanelProps {
   timerDeadline: TimerDeadline;
@@ -43,9 +33,14 @@ export function CountdownPanel({ timerDeadline }: CountdownPanelProps) {
   );
   const [announcement, setAnnouncement] = useState("");
   const lastAnnouncedRef = useRef<number | null>(null);
+  // Decorative-only baseline for the progress ring: the first observed
+  // remaining duration for this deadline. Purely visual — never influences
+  // the authoritative countdown math above.
+  const totalMsRef = useRef(Math.max(1, timerDeadline.deadlineEpochMs - Date.now()));
 
   useEffect(() => {
     lastAnnouncedRef.current = null;
+    totalMsRef.current = Math.max(1, timerDeadline.deadlineEpochMs - Date.now());
 
     const tick = () => {
       const remaining = Math.max(0, timerDeadline.deadlineEpochMs - Date.now());
@@ -73,19 +68,50 @@ export function CountdownPanel({ timerDeadline }: CountdownPanelProps) {
 
   const remainingSeconds = Math.ceil(remainingMs / 1000);
   const label = TIMER_LABELS[timerDeadline.name] ?? "Time remaining";
+  const progress = Math.min(1, Math.max(0, remainingMs / totalMsRef.current));
+  const urgent = remainingSeconds <= 10;
 
   return (
-    <div role="timer" aria-label={label}>
-      <p
-        aria-hidden="true"
-        style={{ fontSize: "1.5rem", fontVariantNumeric: "tabular-nums", margin: 0 }}
-      >
-        {formatSeconds(remainingSeconds)}
-      </p>
-      <span style={srOnlyStyle} aria-live="polite">
+    <motion.div
+      role="timer"
+      aria-label={label}
+      initial={{ opacity: 0, y: 16, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      className="flex items-center gap-4 rounded-2xl border border-border bg-surface-raised p-5 shadow-lg shadow-black/5"
+    >
+      <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true" className="shrink-0 -rotate-90">
+        <circle cx="36" cy="36" r={RING_RADIUS} fill="none" stroke="var(--gridline)" strokeWidth="5" />
+        <circle
+          cx="36"
+          cy="36"
+          r={RING_RADIUS}
+          fill="none"
+          stroke={urgent ? "var(--status-critical)" : "var(--accent-blue)"}
+          strokeWidth="5"
+          strokeLinecap="round"
+          strokeDasharray={RING_CIRCUMFERENCE}
+          strokeDashoffset={RING_CIRCUMFERENCE * (1 - progress)}
+          style={{ transition: "stroke-dashoffset 0.25s linear, stroke 0.3s ease" }}
+        />
+      </svg>
+      <div>
+        <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">{label}</p>
+        <p
+          aria-hidden="true"
+          className={cn(
+            "font-semibold tabular-nums transition-colors",
+            urgent ? "text-accent-red" : "text-ink",
+            "text-3xl"
+          )}
+        >
+          {formatSeconds(remainingSeconds)}
+        </p>
+      </div>
+      <span className="sr-only" aria-live="polite">
         {announcement}
       </span>
-    </div>
+    </motion.div>
   );
 }
 

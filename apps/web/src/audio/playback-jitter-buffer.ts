@@ -6,6 +6,12 @@ export class PlaybackJitterBuffer {
   private context: AudioContext;
   private sampleRateHz: number;
   private nextPlayTime = 0;
+  // Lazily-created passthrough tap: every scheduled source routes through
+  // this analyser on its way to the destination instead of connecting
+  // directly, so a UI layer (the voice blob, Spec/CLAUDE.md UI upgrade) can
+  // read live examiner-output amplitude without touching playback timing or
+  // audio content at all — analysers are silent, read-only observers.
+  private analyserNode: AnalyserNode | null = null;
 
   constructor(context: AudioContext, sampleRateHz: number) {
     this.context = context;
@@ -24,11 +30,23 @@ export class PlaybackJitterBuffer {
 
     const source = this.context.createBufferSource();
     source.buffer = buffer;
-    source.connect(this.context.destination);
+    source.connect(this.getAnalyser());
 
     const startAt = Math.max(this.context.currentTime, this.nextPlayTime);
     source.start(startAt);
     this.nextPlayTime = startAt + buffer.duration;
+  }
+
+  /** Read-only amplitude tap for the examiner's live playback (UI-only, never
+   * part of the audio graph's decision-making — CLAUDE.md rule 1). */
+  getAnalyser(): AnalyserNode {
+    if (!this.analyserNode) {
+      this.analyserNode = this.context.createAnalyser();
+      this.analyserNode.fftSize = 256;
+      this.analyserNode.smoothingTimeConstant = 0.75;
+      this.analyserNode.connect(this.context.destination);
+    }
+    return this.analyserNode;
   }
 
   reset(): void {

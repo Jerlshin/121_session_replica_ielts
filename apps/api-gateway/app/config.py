@@ -85,6 +85,15 @@ class Settings(BaseSettings):
     part3_discussion_turns: int = 6
     reanchor_every_n_turns: int = 6
 
+    # Safety net for the directive dispatcher's turn-taking gate
+    # (exam_orchestrator._dispatch_directives): normally a queued directive
+    # waits for Gemini's TurnComplete on whatever's currently in flight, but
+    # a candidate barge-in (Interrupted, Spec 01 §4.1) can abort a turn
+    # without Gemini ever emitting one for it. Rather than risk the whole
+    # exam stalling on a TurnComplete that will never arrive, the dispatcher
+    # gives up waiting after this long and sends anyway.
+    directive_dispatch_timeout_seconds: float = 10.0
+
     finalizing_watchdog_seconds: float = 60
 
     # Grading pipeline trigger (Spec 03 §2.1) — a producer-only broker
